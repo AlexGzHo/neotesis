@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+# Neotesis - Landing Page: Tesis Express Pro
 
-## Project info
+Este repositorio contiene la landing page oficial del servicio **Tesis Express Pro**, ofrecido por **Neotesis**. 
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Neotesis** es una empresa dedicada a la asesoría académica y elaboración de proyectos de investigación. "Tesis Express Pro" es nuestro servicio estrella enfocado en ayudar a estudiantes a estructurar su proyecto de tesis en 7 días.
 
-## How can I edit this code?
+## 🚀 Acerca del Proyecto
 
-There are several ways of editing your application.
+El objetivo de este sitio es captar estudiantes interesados en avanzar su tesis rápidamente, ofreciendo una solución clara y personalizada.
 
-**Use Lovable**
+### Características Principales
+- **Branding Neotesis**: Integración de identidad visual y confianza de la marca.
+- **Estructura de Ventas**: Hero, Problema, Solución, Metodología (Paso a paso), Prueba Social (Testimonios) y Autoridad.
+- **Lead Magnet**: Formulario de captura para descargar una guía gratuita.
+- **Conversión Directa**: Botones de WhatsApp configurados para contactar al equipo de ventas de Neotesis.
+- **FAQ Interactiva**: Sección de preguntas frecuentes.
+- **Contenido Centralizado**: Gestión de textos desde `src/content/landingContent.ts`.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 🛠️ Tecnologías Utilizadas
 
-Changes made via Lovable will be committed automatically to this repo.
+- **[React](https://reactjs.org/)** + **[Vite](https://vitejs.dev/)**
+- **[TypeScript](https://www.typescriptlang.org/)**
+- **[Tailwind CSS](https://tailwindcss.com/)**
+- **[Shadcn/UI](https://ui.shadcn.com/)**
 
-**Use your preferred IDE**
+## 📂 Estructura del Proyecto
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Edita el contenido del servicio aquí:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+  ├── content/
+  │   └── landingContent.ts  <-- ¡EDITA AQUÍ TEXTOS Y NÚMEROS!
+  ├── pages/
+  │   └── Index.tsx          <-- Estructura principal
+  └── components/            
 ```
 
-**Edit a file directly in GitHub**
+## 💻 Instalación y Uso Local
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1.  **Clonar el repositorio**:
+    ```bash
+    git clone <URL_DEL_REPOSITORIO>
+    ```
 
-**Use GitHub Codespaces**
+2.  **Instalar dependencias**:
+    ```bash
+    npm install
+    ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3.  **Correr el servidor**:
+    ```bash
+    npm run dev
+    ```
 
-## What technologies are used for this project?
+## 📦 Despliegue (Producción)
 
-This project is built with:
+Listo para **Netlify** (drag & drop la carpeta `dist` tras el build) o Vercel.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1.  **Generar el build**:
+    ```bash
+    npm run build
+    ```
 
-## How can I deploy this project?
+## 📄 Licencia
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+© 2026 Neotesis. Todos los derechos reservados.
