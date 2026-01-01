@@ -75,7 +75,7 @@ const Index = () => {
                 <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                 {content.hero.badge}
               </div>
-              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
+              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
                 {content.hero.title} <span className="text-gradient">{content.hero.titleHighlight}</span> {content.hero.titleEnd}
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">{content.hero.subtitle}</p>
@@ -99,7 +99,7 @@ const Index = () => {
               <div className="relative bg-gradient-to-br from-primary/10 to-transparent p-4 rounded-3xl">
                 <img src={heroImage} alt="Estudiante graduada" className="w-full max-w-md mx-auto rounded-2xl shadow-elevated object-cover" />
               </div>
-              <div className="absolute -bottom-4 -left-4 md:left-4 bg-card shadow-card rounded-2xl p-4 animate-float">
+              <div className="absolute -bottom-4 left-4 md:-left-4 bg-card shadow-card rounded-2xl p-4 animate-float">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
                     <CheckCircle className="w-6 h-6 text-primary" />
@@ -110,7 +110,7 @@ const Index = () => {
                   </div>
                 </div>
               </div>
-              <div className="absolute -top-4 -right-4 md:right-4 bg-card shadow-card rounded-2xl p-4 animate-float" style={{ animationDelay: "1s" }}>
+              <div className="absolute -top-4 right-4 md:-right-4 bg-card shadow-card rounded-2xl p-4 animate-float" style={{ animationDelay: "1s" }}>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center">
                     <span className="text-2xl font-bold text-accent">{content.hero.floatingBadge2.number}</span>
