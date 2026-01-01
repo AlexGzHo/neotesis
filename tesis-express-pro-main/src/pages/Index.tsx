@@ -68,24 +68,24 @@ const Index = () => {
       <section className="relative min-h-screen bg-background overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        <div className="container relative z-10 py-12 lg:py-20">
+        <div className="container relative z-10 py-8 lg:py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8 animate-fade-in-up">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold">
                 <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                 {content.hero.badge}
               </div>
-              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
+              <h1 className="font-display text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
                 {content.hero.title} <span className="text-gradient">{content.hero.titleHighlight}</span> {content.hero.titleEnd}
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">{content.hero.subtitle}</p>
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">{content.hero.subtitle}</p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Button variant="hero" size="xl" onClick={handleWhatsAppClick} className="group">
+                <Button variant="hero" size="xl" onClick={handleWhatsAppClick} className="group w-full sm:w-auto">
                   {content.hero.cta}
                   <ArrowRight className="transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
-              <div className="flex items-center gap-6 pt-4 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-4 text-sm text-muted-foreground">
                 {content.hero.trustItems.map((item, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <Check className="w-5 h-5 text-primary" />
