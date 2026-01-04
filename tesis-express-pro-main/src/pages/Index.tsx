@@ -10,7 +10,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import heroImage from "@/assets/hero-graduate.jpg";
+import heroImage from "@/assets/hero-graduate.webp";
 import guiaPdf from "@/assets/5_Trucos_Infalibles_para_Acelerar_Tu_Tesis_Corrigido.pdf";
 import {
   ArrowRight,
