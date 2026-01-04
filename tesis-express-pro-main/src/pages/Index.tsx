@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { content } from "@/content/landingContent";
+import { FlipCountdown } from "@/components/FlipCountdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -10,12 +11,12 @@ import {
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-graduate.jpg";
+import guiaPdf from "@/assets/5_Trucos_Infalibles_para_Acelerar_Tu_Tesis_Corrigido.pdf";
 import {
   ArrowRight,
   MessageCircle,
   Download,
   Mail,
-  User,
   Check,
   Star,
   HelpCircle,
@@ -35,19 +36,31 @@ const stepIcons = [MessageCircle, Search, FileEdit, CheckCircle];
 const authorityIcons = [Users, Target, Award];
 
 const Index = () => {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasDownloaded, setHasDownloaded] = useState(false);
   const { toast } = useToast();
 
   const whatsappUrl = `https://wa.me/${content.whatsappNumber}?text=${encodeURIComponent(content.whatsappMessage)}`;
 
   const handleWhatsAppClick = () => window.open(whatsappUrl, "_blank");
 
+  const handlePromoWhatsAppClick = () => {
+    const url = `https://wa.me/${content.whatsappNumber}?text=${encodeURIComponent(content.promo.whatsappMessage)}`;
+    window.open(url, "_blank");
+  };
+
+  const scrollToPromocion = () => {
+    const element = document.getElementById("promocion");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) {
-      toast({ title: "Campos requeridos", description: content.leadMagnet.errorRequired, variant: "destructive" });
+    if (!email.trim()) {
+      toast({ title: "Campo requerido", description: content.leadMagnet.errorRequired, variant: "destructive" });
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -56,14 +69,53 @@ const Index = () => {
     }
     setIsSubmitting(true);
     await new Promise((r) => setTimeout(r, 1500));
+
+    // Trigger download
+    const link = document.createElement("a");
+    link.href = guiaPdf;
+    link.download = "5_Trucos_Infalibles_para_Acelerar_Tu_Tesis.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
     toast({ title: content.leadMagnet.successTitle, description: content.leadMagnet.successMessage });
-    setName("");
     setEmail("");
     setIsSubmitting(false);
+    setHasDownloaded(true);
   };
 
   return (
     <main className="min-h-screen">
+      {/* ========== BANNER ========== */}
+      <div className="bg-primary/95 backdrop-blur-md py-3 px-4 relative z-50 shadow-elevated border-b border-white/10 sticky top-0">
+        <div className="container flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-primary-foreground text-center">
+          <div className="flex items-center gap-3 text-base sm:text-lg md:text-xl font-extrabold tracking-tight">
+            <span className="text-xl md:text-2xl animate-pulse drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">✨</span>
+            <span className="bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent">
+              {content.banner.text}
+            </span>
+            <span className="opacity-30 hidden md:inline ml-1 text-2xl font-light">|</span>
+            <span className="font-semibold opacity-80 hidden md:inline text-sm lg:text-base italic">
+              {content.banner.subtext}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <button
+              onClick={scrollToPromocion}
+              className="bg-accent text-accent-foreground hover:bg-accent/90 px-6 py-2 rounded-lg font-black uppercase tracking-widest transition-all hover:scale-110 active:scale-95 shadow-[0_10px_30px_rgba(245,158,11,0.2)] text-xs md:text-sm"
+            >
+              {content.banner.cta}
+            </button>
+
+            <div className="flex items-center gap-3 py-1.5 px-3 bg-white/5 rounded-xl border border-white/10 shadow-inner scale-90 sm:scale-100 origin-center">
+              <span className="text-xl md:text-2xl animate-bounce-slow">⏱</span>
+              <FlipCountdown targetDate={content.banner.expiresAt!} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ========== HERO ========== */}
       <section className="relative min-h-screen bg-background overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -71,9 +123,18 @@ const Index = () => {
         <div className="container relative z-10 py-8 lg:py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8 animate-fade-in-up">
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold">
-                <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                {content.hero.badge}
+              <div className="flex flex-col gap-4">
+                <div
+                  onClick={scrollToPromocion}
+                  className="inline-flex items-center gap-2 bg-accent/20 text-accent-foreground px-4 py-2 rounded-full text-sm font-bold border border-accent/30 w-fit animate-pulse-slow cursor-pointer hover:bg-accent/30 transition-colors"
+                >
+                  <Star className="w-4 h-4 fill-accent" />
+                  {content.hero.discountBadge}
+                </div>
+                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold w-fit">
+                  <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  {content.hero.badge}
+                </div>
               </div>
               <h1 className="font-display text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground">
                 {content.hero.title} <span className="text-gradient">{content.hero.titleHighlight}</span> {content.hero.titleEnd}
@@ -190,6 +251,56 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ========== PROMOCIÓN ========== */}
+      <section id="promocion" className="py-20 bg-primary relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-accent/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+
+        <div className="container relative z-10">
+          <div className="bg-card rounded-[2.5rem] p-8 md:p-16 shadow-elevated border border-white/10 max-w-5xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-6 py-2 rounded-full text-lg font-bold mb-8 animate-bounce">
+              <Star className="w-5 h-5 fill-current" />
+              {content.promo.discount} EXTRA
+            </div>
+
+            <h2 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-foreground mb-6 leading-tight">
+              {content.promo.title}
+            </h2>
+
+            <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto">
+              {content.promo.subtitle}
+            </p>
+
+            <div className="flex flex-col items-center gap-8 border-y border-border/50 py-12 mb-12">
+              <p className="text-muted-foreground font-medium uppercase tracking-[0.2em] text-sm">Precios Referenciales Sin Descuento</p>
+              <div className="flex flex-wrap justify-center gap-6 md:gap-12 opacity-50">
+                {content.promo.strikethroughPrices.map((price, i) => (
+                  <span key={i} className="text-3xl md:text-5xl font-display font-light line-through decoration-accent decoration-2 decoration-solid">
+                    {price}
+                  </span>
+                ))}
+              </div>
+              <div className="bg-accent/10 text-accent font-bold px-4 py-2 rounded-lg text-lg animate-pulse">
+                ¡Elige el éxito, no el precio alto!
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <Button
+                variant="cta"
+                size="xl"
+                onClick={handlePromoWhatsAppClick}
+                className="w-full sm:w-auto px-12 h-20 text-xl font-bold bg-[#25D366] hover:bg-[#20bd5a] border-none shadow-[0_20px_40px_rgba(37,211,102,0.3)] hover:shadow-[0_25px_50px_rgba(37,211,102,0.4)] transition-all duration-300 transform hover:-translate-y-1 group"
+              >
+                <MessageCircle className="w-8 h-8 mr-2 group-hover:scale-110 transition-transform" />
+                {content.promo.cta}
+              </Button>
+              <p className="text-muted-foreground text-sm italic">{content.promo.disclaimer}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ========== CÓMO FUNCIONA ========== */}
       <section className="py-20 bg-secondary/30">
         <div className="container">
@@ -297,34 +408,33 @@ const Index = () => {
                 <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">{content.leadMagnet.title}</h2>
                 <p className="text-lg text-muted-foreground max-w-xl mx-auto">{content.leadMagnet.description}</p>
               </div>
-              <form onSubmit={handleLeadSubmit} className="space-y-4 max-w-md mx-auto">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder={content.leadMagnet.namePlaceholder}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full h-14 pl-12 pr-4 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    maxLength={100}
-                  />
+              {!hasDownloaded ? (
+                <form onSubmit={handleLeadSubmit} className="space-y-4 max-w-md mx-auto animate-fade-in">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="email"
+                      placeholder={content.leadMagnet.emailPlaceholder}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full h-14 pl-12 pr-4 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      maxLength={255}
+                    />
+                  </div>
+                  <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? content.leadMagnet.submitting : content.leadMagnet.cta}
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">{content.leadMagnet.privacy}</p>
+                </form>
+              ) : (
+                <div className="bg-primary/5 rounded-2xl p-8 border border-primary/10 text-center animate-scale-in">
+                  <div className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <Check className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">¡Gracias por descargar!</h3>
+                  <p className="text-muted-foreground">{content.leadMagnet.successMessage}</p>
                 </div>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="email"
-                    placeholder={content.leadMagnet.emailPlaceholder}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-14 pl-12 pr-4 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    maxLength={255}
-                  />
-                </div>
-                <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? content.leadMagnet.submitting : content.leadMagnet.cta}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">{content.leadMagnet.privacy}</p>
-              </form>
+              )}
             </div>
           </div>
         </div>
@@ -358,24 +468,41 @@ const Index = () => {
       </section>
 
       {/* ========== FAQ ========== */}
-      <section className="py-24 md:py-32 bg-secondary/20 border-t border-border/50">
-        <div className="container">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="text-center space-y-4 mb-12">
-              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Dudas comunes</span>
-              <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+      <section className="py-24 md:py-32 bg-background relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl opacity-50" />
+
+        <div className="container relative z-10">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center space-y-4 mb-16">
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-bold tracking-wide">
+                <HelpCircle className="w-4 h-4" />
+                Dudas comunes
+              </div>
+              <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground">
                 {content.faq.title}
               </h2>
+              <div className="h-1.5 w-24 bg-primary/20 mx-auto rounded-full" />
             </div>
 
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="single" collapsible className="w-full space-y-4">
               {content.faq.items.map((item, index) => (
-                <AccordionItem key={index} value={`item-${index}`} className="border-b border-border/50">
-                  <AccordionTrigger className="text-left text-lg font-medium hover:text-primary transition-colors py-6">
-                    {item.question}
+                <AccordionItem
+                  key={index}
+                  value={`item-${index}`}
+                  className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-soft hover:shadow-card transition-all duration-300"
+                >
+                  <AccordionTrigger className="text-left text-lg font-semibold hover:text-primary hover:no-underline px-6 py-5 group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <span className="text-sm font-bold">?</span>
+                      </div>
+                      {item.question}
+                    </div>
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground text-base leading-relaxed pb-6">
-                    {item.answer}
+                  <AccordionContent className="text-muted-foreground text-base leading-relaxed px-6 pb-6 pt-2 border-t border-border/30 bg-secondary/20">
+                    <div className="pl-12">
+                      {item.answer}
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               ))}

@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -42,7 +42,7 @@
     --gradient-hero: linear-gradient(135deg, hsl(216 49% 24%) 0%, hsl(216 49% 35%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(30 30% 98%) 100%);
     --gradient-text: linear-gradient(135deg, hsl(216 49% 24%) 0%, hsl(216 49% 40%) 100%);
-    
+
     --shadow-soft: 0 4px 20px -4px hsl(216 49% 24% / 0.1);
     --shadow-card: 0 8px 30px -8px hsl(220 20% 15% / 0.08);
     --shadow-elevated: 0 20px 50px -15px hsl(216 49% 24% / 0.15);
@@ -100,7 +100,12 @@
     font-family: var(--font-body);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
   }
 }
@@ -154,6 +159,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -164,6 +170,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -171,10 +178,49 @@
 }
 
 @keyframes pulseSoft {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.02);
   }
+}
+
+@keyframes flipDown {
+  0% {
+    transform: rotateX(0deg);
+  }
+
+  100% {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flipUp {
+  0% {
+    transform: rotateX(90deg);
+  }
+
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.animate-flip-down {
+  animation: flipDown 0.45s ease-in forwards;
+  transform-origin: bottom;
+  backface-visibility: hidden;
+}
+
+.animate-flip-up {
+  animation: flipUp 0.45s ease-out 0.45s forwards;
+  transform-origin: top;
+  backface-visibility: hidden;
 }

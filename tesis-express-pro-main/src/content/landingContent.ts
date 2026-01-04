@@ -8,7 +8,14 @@ export const content = {
   whatsappMessage: "Hola, tengo interés en tu asesoría de tesis",
 
   // HERO SECTION
+  banner: {
+    text: "20% OFF en tu tesis este 2026",
+    subtext: "Cupos limitados",
+    cta: "Aprovechar descuento",
+    expiresAt: "2026-01-15T23:59:59",
+  },
   hero: {
+    discountBadge: "¡20% de Descuento por Inicio de Año!",
     badge: "Asesoría y elaboración de tesis",
     title: "Ten listo tu proyecto de tesis en solo",
     titleHighlight: "7 días",
@@ -50,6 +57,17 @@ export const content = {
     ],
   },
 
+  // PROMOCIÓN SECTION
+  promo: {
+    title: "¡Regalo Especial por Inicio de Año 2026!",
+    subtitle: "Asegura tu vacante con un descuento exclusivo",
+    discount: "20% OFF",
+    whatsappMessage: "Hola, quiero acceder a la promoción del 20% de descuento en la elaboración de mi tesis",
+    cta: "Acceder al 20% de descuento ahora",
+    strikethroughPrices: ["S/ 1,800", "S/ 1,600", "S/ 1,500"],
+    disclaimer: "*Válido solo por tiempo limitado o hasta agotar cupos.",
+  },
+
   // CÓMO FUNCIONA SECTION
   howItWorks: {
     title: "¿Cómo",
@@ -67,47 +85,47 @@ export const content = {
   testimonials: {
     badge: "Testimonios",
     title: "Lo que dicen nuestros graduados",
-    subtitle: "Historias reales de tesistas que lograron avanzar con su proyecto",
+    subtitle: "Historias reales de tesistas que lograron graduarse con ayuda de Neotesis Perú",
     items: [
       {
         name: "María G.",
-        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        review: "Estuve varios meses estancada con mi proyecto y no lograba avanzar. En cinco días pude tenerlo bien estructurado y lo presenté sin observaciones. De verdad me ayudaron bastante",
+        image: "/facebook-profile3 - mujer.png",
+        review: "Estuve varios meses estancada con mi tesis y no lograba avanzar. En cinco días pude tenerlo bien estructurado y lo presenté sin observaciones. De verdad me ayudaron bastante",
         rating: 5,
         career: "Psicología",
       },
       {
         name: "Carlos M.",
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        review: "Mi asesor me había observado el proyecto 3 veces. Después de esta asesoría, lo aprobaron a la primera. Muy recomendado.",
+        image: "/facebook-profile1 - hombre.png",
+        review: "Mi asesor ya me había observado el proyecto como tres veces y siempre había algo. Después de esta asesoría lo aprobaron a la primera. Súper recomendado.",
         rating: 5,
         career: "Ingeniería Industrial",
       },
       {
         name: "Ana T.",
-        image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-        review: "El enfoque personalizado marca la diferencia. Me explicaron todo paso a paso y ahora entiendo cómo estructurar correctamente.",
+        image: "/facebook-profile4 - mujer.png",
+        review: "Me gustó bastante el enfoque, fue muy personalizado. Me explicaron todo paso a paso y recién ahí entendí cómo debía estructurar bien el proyecto.",
         rating: 5,
         career: "Psicología",
       },
       {
         name: "Mauricio R.",
-        image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-        review: "Tenía el tema pero no sabía cómo plantearlo. En una semana tenía todo listo: problema, objetivos y metodología claros.",
+        image: "/facebook-profile2 - hombre.png",
+        review: "Tenía el tema claro, pero no sabía cómo plantearlo correctamente. En una semana ya tenía definidos el problema, los objetivos y la metodología. Eso me quitó bastante estrés.",
         rating: 5,
         career: "Derecho",
       },
       {
         name: "Daniela Z.",
-        image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-        review: "Profesionalismo total. Respondieron todas mis dudas y me guiaron en cada paso. Mi proyecto quedó impecable.",
+        image: "/facebook-profile5 - mujer.png",
+        review: "Muy profesionales en todo momento. Respondieron mis dudas incluso fuera del horario y me fueron guiando poco a poco. Estoy contenta con el servicio",
         rating: 5,
         career: "Contabilidad",
       },
       {
         name: "Luis R.",
-        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        review: "Llevaba un año estancado. Gracias a esta asesoría finalmente pude avanzar y ya estoy en la etapa de desarrollo.",
+        image: "/facebook-profile-6 - hombre.png",
+        review: "Llevaba casi un año sin poder graduarme, pero gracias a Neotesis logré terminar mi investigación y obtener mi título.",
         rating: 5,
         career: "Ingeniería de Sistemas",
       },
@@ -127,16 +145,15 @@ export const content = {
 
   // LEAD MAGNET SECTION
   leadMagnet: {
-    title: "Descarga gratis la guía: Los 5 errores que hacen que tu proyecto de tesis sea observado",
-    description: "Antes de seguir avanzando a ciegas, descarga esta guía gratuita y evita los errores más comunes que retrasan la aprobación del proyecto.",
-    namePlaceholder: "Tu nombre",
+    title: "5 Trucos Infalibles para Acelerar la Aprobación de Tu Tesis – ¡Descarga la Guía Gratis!",
+    description: "¿Te gustaría evitar las trabas que retrasan tu tesis? Aprende los trucos que muchos estudiantes desconocen para optimizar su trabajo, evitar rechazos y asegurarse la aprobación. Descarga nuestra guía ahora y da un gran paso hacia el éxito.",
     emailPlaceholder: "Tu correo electrónico",
-    cta: "Descargar la guía gratuita",
+    cta: "Descargar y comenzar ahora",
     submitting: "Enviando...",
     privacy: "Tu información está segura. No spam.",
     successTitle: "¡Guía enviada!",
-    successMessage: "Revisa tu correo electrónico para descargar la guía.",
-    errorRequired: "Por favor completa tu nombre y correo electrónico.",
+    successMessage: "Has descargado la guía correctamente y también la enivamos a tu correo electrónico.",
+    errorRequired: "Por favor ingresa tu correo electrónico.",
     errorEmail: "Por favor ingresa un correo electrónico válido.",
   },
 
