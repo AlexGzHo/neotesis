@@ -1,48 +1,31 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { content } from "@/content/landingContent";
 import { FlipCountdown } from "@/components/FlipCountdown";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-graduate.webp";
-import guiaPdf from "@/assets/5_Trucos_Infalibles_para_Acelerar_Tu_Tesis_Corrigido.pdf";
 import {
   ArrowRight,
   MessageCircle,
-  Download,
-  Mail,
   Check,
   Star,
   HelpCircle,
   AlertTriangle,
   TrendingDown,
   Clock,
-  Search,
-  FileEdit,
   CheckCircle,
-  Users,
-  Target,
-  Award,
 } from "lucide-react";
 
+// Lazy Sections
+const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection"));
+const TestimonialsSection = lazy(() => import("@/components/landing/TestimonialsSection"));
+const AuthoritySection = lazy(() => import("@/components/landing/AuthoritySection"));
+const LeadMagnetSection = lazy(() => import("@/components/landing/LeadMagnetSection"));
+const FaqSection = lazy(() => import("@/components/landing/FaqSection"));
+
 const problemIcons = [HelpCircle, AlertTriangle, TrendingDown, Clock];
-const stepIcons = [MessageCircle, Search, FileEdit, CheckCircle];
-const authorityIcons = [Users, Target, Award];
 
 const Index = () => {
-  const [email, setEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasDownloaded, setHasDownloaded] = useState(false);
-  const { toast } = useToast();
-
   const whatsappUrl = `https://wa.me/${content.whatsappNumber}?text=${encodeURIComponent(content.whatsappMessage)}`;
-
   const handleWhatsAppClick = () => window.open(whatsappUrl, "_blank");
 
   const handlePromoWhatsAppClick = () => {
@@ -55,33 +38,6 @@ const Index = () => {
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
     }
-  };
-
-  const handleLeadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      toast({ title: "Campo requerido", description: content.leadMagnet.errorRequired, variant: "destructive" });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: "Correo inválido", description: content.leadMagnet.errorEmail, variant: "destructive" });
-      return;
-    }
-    setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-
-    // Trigger download
-    const link = document.createElement("a");
-    link.href = guiaPdf;
-    link.download = "5_Trucos_Infalibles_para_Acelerar_Tu_Tesis.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({ title: content.leadMagnet.successTitle, description: content.leadMagnet.successMessage });
-    setEmail("");
-    setIsSubmitting(false);
-    setHasDownloaded(true);
   };
 
   return (
@@ -308,152 +264,22 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ========== CÓMO FUNCIONA ========== */}
-      <section className="py-20 bg-secondary/30">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center space-y-6 mb-16">
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
-              {content.howItWorks.title} <span className="text-gradient">{content.howItWorks.titleHighlight}</span>?
-            </h2>
-            <p className="text-lg text-muted-foreground">{content.howItWorks.subtitle}</p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {content.howItWorks.steps.map((step, i) => {
-              const Icon = stepIcons[i];
-              return (
-                <div key={i} className="relative group">
-                  {i < 3 && <div className="hidden lg:block absolute top-16 left-full w-full h-0.5 bg-gradient-to-r from-primary/30 to-transparent z-0" />}
-                  <div className="bg-card rounded-3xl p-8 shadow-card border border-border/50 hover:shadow-elevated transition-all duration-300 relative z-10 h-full">
-                    <span className="absolute top-4 right-4 text-5xl font-display font-bold text-primary/40">{step.number}</span>
-                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
-                      <Icon className="w-8 h-8 text-primary" />
-                    </div>
-                    <h3 className="font-display text-xl font-semibold text-foreground mb-3">{step.title}</h3>
-                    <p className="text-muted-foreground">{step.description}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* ========== SECCIONES LAZY ========== */}
+      <Suspense fallback={<div className="h-96 bg-secondary/10" />}>
+        <HowItWorksSection />
+      </Suspense>
 
-      {/* ========== TESTIMONIOS ========== */}
-      <section className="py-20 md:py-28 bg-secondary/50">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="text-center mb-16">
-            <span className="text-primary font-semibold text-sm uppercase tracking-wider">{content.testimonials.badge}</span>
-            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mt-3 mb-4">{content.testimonials.title}</h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">{content.testimonials.subtitle}</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {content.testimonials.items.map((t, i) => (
-              <Card key={i} className="group bg-card border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-elevated hover:-translate-y-2 cursor-default">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="relative">
-                      <img
-                        src={t.image}
-                        alt={t.name}
-                        className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-300"
-                        loading="lazy"
-                        decoding="async"
-                        width="56"
-                        height="56"
-                      />
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary-foreground" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300">{t.name}</h3>
-                      <p className="text-sm text-muted-foreground">{t.career}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    {[...Array(5)].map((_, j) => (
-                      <Star key={j} className={`w-4 h-4 ${j < t.rating ? "fill-accent text-accent" : "fill-muted text-muted"}`} />
-                    ))}
-                  </div>
-                  <p className="mt-4 text-muted-foreground leading-relaxed text-sm">"{t.review}"</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-96 bg-secondary/20" />}>
+        <TestimonialsSection />
+      </Suspense>
 
-      {/* ========== AUTORIDAD ========== */}
-      <section className="py-20 bg-background">
-        <div className="container">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl p-8 md:p-12 border border-primary/10">
-              <div className="text-center space-y-6 mb-12">
-                <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">{content.authority.title}</h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{content.authority.description}</p>
-              </div>
-              <div className="grid md:grid-cols-3 gap-6">
-                {content.authority.points.map((p, i) => {
-                  const Icon = authorityIcons[i];
-                  return (
-                    <div key={i} className="bg-card rounded-2xl p-6 shadow-soft hover:shadow-card transition-all duration-300">
-                      <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-                        <Icon className="w-7 h-7 text-primary" />
-                      </div>
-                      <h3 className="font-display text-lg font-semibold text-foreground mb-2">{p.title}</h3>
-                      <p className="text-muted-foreground text-sm leading-relaxed">{p.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-96 bg-background" />}>
+        <AuthoritySection />
+      </Suspense>
 
-      {/* ========== LEAD MAGNET ========== */}
-      <section className="py-20 bg-primary">
-        <div className="container">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-card rounded-3xl p-8 md:p-12 shadow-elevated">
-              <div className="text-center space-y-6 mb-10">
-                <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
-                  <Download className="w-10 h-10 text-primary" />
-                </div>
-                <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">{content.leadMagnet.title}</h2>
-                <p className="text-lg text-muted-foreground max-w-xl mx-auto">{content.leadMagnet.description}</p>
-              </div>
-              {!hasDownloaded ? (
-                <form onSubmit={handleLeadSubmit} className="space-y-4 max-w-md mx-auto animate-fade-in">
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="email"
-                      placeholder={content.leadMagnet.emailPlaceholder}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-14 pl-12 pr-4 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                      maxLength={255}
-                    />
-                  </div>
-                  <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? content.leadMagnet.submitting : content.leadMagnet.cta}
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">{content.leadMagnet.privacy}</p>
-                </form>
-              ) : (
-                <div className="bg-primary/5 rounded-2xl p-8 border border-primary/10 text-center animate-scale-in">
-                  <div className="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <Check className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-bold text-foreground mb-2">¡Gracias por descargar!</h3>
-                  <p className="text-muted-foreground">{content.leadMagnet.successMessage}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-96 bg-primary" />}>
+        <LeadMagnetSection />
+      </Suspense>
 
       {/* ========== CTA FINAL ========== */}
       <section className="py-20 bg-gradient-to-br from-background via-secondary/30 to-background">
@@ -482,55 +308,14 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ========== FAQ ========== */}
-      <section className="py-24 md:py-32 bg-background relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl opacity-50" />
-
-        <div className="container relative z-10">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center space-y-4 mb-16">
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-bold tracking-wide">
-                <HelpCircle className="w-4 h-4" />
-                Dudas comunes
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground">
-                {content.faq.title}
-              </h2>
-              <div className="h-1.5 w-24 bg-primary/20 mx-auto rounded-full" />
-            </div>
-
-            <Accordion type="single" collapsible className="w-full space-y-4">
-              {content.faq.items.map((item, index) => (
-                <AccordionItem
-                  key={index}
-                  value={`item-${index}`}
-                  className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-soft hover:shadow-card transition-all duration-300"
-                >
-                  <AccordionTrigger className="text-left text-lg font-semibold hover:text-primary hover:no-underline px-6 py-5 group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
-                        <span className="text-sm font-bold">?</span>
-                      </div>
-                      {item.question}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground text-base leading-relaxed px-6 pb-6 pt-2 border-t border-border/30 bg-secondary/20">
-                    <div className="pl-12">
-                      {item.answer}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-        </div>
-      </section>
+      <Suspense fallback={<div className="h-96 bg-background" />}>
+        <FaqSection />
+      </Suspense>
 
       {/* ========== FOOTER ========== */}
       <footer className="py-12 bg-foreground text-primary-foreground">
         <div className="container">
           <div className="grid md:grid-cols-2 gap-12 items-center mb-12">
-            {/* Columna Izquierda: Confianza */}
             <div className="space-y-4 text-center md:text-left">
               <p className="text-lg font-medium leading-relaxed opacity-90">
                 {content.footer.trustText}
@@ -540,7 +325,6 @@ const Index = () => {
               </p>
             </div>
 
-            {/* Columna Derecha: WhatsApp CTA */}
             <div className="flex flex-col items-center md:items-end gap-4">
               <button
                 onClick={handleWhatsAppClick}
@@ -552,7 +336,6 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Bottom Footer */}
           <div className="pt-8 border-t border-primary-foreground/10 text-center">
             <p className="opacity-40 text-sm">
               © 2026 – {content.footer.copyright}
