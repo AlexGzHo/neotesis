@@ -4,6 +4,12 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/neotesis.svg" />
+
+  <!-- Preload Assets Críticos -->
+  <link rel="preload" href="/src/index.css" as="style" />
+  <link rel="preload" href="/src/main.tsx" as="script" />
+
+  <!-- Preconnect/Prefetch -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://fonts.googleapis.com">
@@ -31,8 +37,6 @@
   <meta name="twitter:description"
     content="Asesoría personalizada para estructurar tu proyecto de tesis correctamente." />
 
-  <!-- Preload CSS -->
-  <link rel="preload" href="/src/index.css" as="style" />
   <link rel="stylesheet" href="/src/index.css" />
 
 </head>
