@@ -19,7 +19,7 @@ const HowItWorksSection = () => {
                         return (
                             <div key={i} className="relative group">
                                 {i < 3 && <div className="hidden lg:block absolute top-16 left-full w-full h-0.5 bg-gradient-to-r from-primary/30 to-transparent z-0" />}
-                                <div className="bg-card rounded-3xl p-8 shadow-card border border-border/50 hover:shadow-elevated transition-all duration-300 relative z-10 h-full">
+                                <div className="bg-card rounded-3xl p-8 shadow-card border border-border/50 hover:shadow-elevated transition duration-300 relative z-10 h-full">
                                     <span className="absolute top-4 right-4 text-5xl font-display font-bold text-primary/40">{step.number}</span>
                                     <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors">
                                         <Icon className="w-8 h-8 text-primary" />

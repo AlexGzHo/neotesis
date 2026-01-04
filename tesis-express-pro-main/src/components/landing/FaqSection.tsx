@@ -30,7 +30,7 @@ const FaqSection = () => {
                             <AccordionItem
                                 key={index}
                                 value={`item-${index}`}
-                                className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-soft hover:shadow-card transition-all duration-300"
+                                className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-soft hover:shadow-card transition duration-300"
                             >
                                 <AccordionTrigger className="text-left text-lg font-semibold hover:text-primary hover:no-underline px-6 py-5 group">
                                     <div className="flex items-center gap-4">

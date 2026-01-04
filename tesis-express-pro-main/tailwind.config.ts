@@ -69,12 +69,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
+          from: { opacity: "0", transform: "scaleY(0.95) translateY(-10px)" },
+          to: { opacity: "1", transform: "scaleY(1) translateY(0)" },
         },
         "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+          from: { opacity: "1", transform: "scaleY(1) translateY(0)" },
+          to: { opacity: "0", transform: "scaleY(0.95) translateY(-10px)" },
         },
         "float": {
           "0%, 100%": { transform: "translateY(0)" },

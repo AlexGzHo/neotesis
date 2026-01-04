@@ -59,7 +59,7 @@ const Index = () => {
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <button
               onClick={scrollToPromocion}
-              className="bg-accent text-accent-foreground hover:bg-accent/90 px-6 py-2 rounded-lg font-black uppercase tracking-widest transition-all hover:scale-110 active:scale-95 shadow-[0_10px_30px_rgba(245,158,11,0.2)] text-xs md:text-sm"
+              className="bg-accent text-accent-foreground hover:bg-accent/90 px-6 py-2 rounded-lg font-black uppercase tracking-widest transition hover:scale-110 active:scale-95 shadow-[0_10px_30px_rgba(245,158,11,0.2)] text-xs md:text-sm"
             >
               {content.banner.cta}
             </button>
@@ -162,7 +162,7 @@ const Index = () => {
             {content.problem.items.map((text, i) => {
               const Icon = problemIcons[i];
               return (
-                <div key={i} className="bg-card rounded-2xl p-6 shadow-card hover:shadow-elevated transition-all duration-300 border border-border/50 group">
+                <div key={i} className="bg-card rounded-2xl p-6 shadow-card hover:shadow-elevated transition duration-300 border border-border/50 group">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                       <Icon className="w-6 h-6 text-primary" />
@@ -253,7 +253,7 @@ const Index = () => {
                 variant="cta"
                 size="xl"
                 onClick={handlePromoWhatsAppClick}
-                className="w-full sm:w-auto px-12 h-20 text-xl font-bold bg-[#25D366] hover:bg-[#20bd5a] border-none shadow-[0_20px_40px_rgba(37,211,102,0.3)] hover:shadow-[0_25px_50px_rgba(37,211,102,0.4)] transition-all duration-300 transform hover:-translate-y-1 group"
+                className="w-full sm:w-auto px-12 h-20 text-xl font-bold bg-[#25D366] hover:bg-[#20bd5a] border-none shadow-[0_20px_40px_rgba(37,211,102,0.3)] hover:shadow-[0_25px_50px_rgba(37,211,102,0.4)] transition duration-300 transform hover:-translate-y-1 group"
               >
                 <MessageCircle className="w-8 h-8 mr-2 group-hover:scale-110 transition-transform" />
                 {content.promo.cta}
@@ -328,7 +328,7 @@ const Index = () => {
             <div className="flex flex-col items-center md:items-end gap-4">
               <button
                 onClick={handleWhatsAppClick}
-                className="group relative inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#20bd5a] text-white px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(37,211,102,0.5)] animate-pulse-slow"
+                className="group relative inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#20bd5a] text-white px-8 py-4 rounded-full font-bold text-lg transition duration-300 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(37,211,102,0.5)] animate-pulse-slow"
               >
                 <MessageCircle className="w-6 h-6" />
                 {content.footer.whatsappCta}

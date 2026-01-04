@@ -17,7 +17,7 @@ const AuthoritySection = () => {
                             {content.authority.points.map((p, i) => {
                                 const Icon = authorityIcons[i];
                                 return (
-                                    <div key={i} className="bg-card rounded-2xl p-6 shadow-soft hover:shadow-card transition-all duration-300">
+                                    <div key={i} className="bg-card rounded-2xl p-6 shadow-soft hover:shadow-card transition duration-300">
                                         <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                             <Icon className="w-7 h-7 text-primary" />
                                         </div>

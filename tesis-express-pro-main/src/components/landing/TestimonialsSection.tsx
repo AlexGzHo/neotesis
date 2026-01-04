@@ -13,14 +13,14 @@ const TestimonialsSection = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {content.testimonials.items.map((t, i) => (
-                        <Card key={i} className="group bg-card border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-elevated hover:-translate-y-2 cursor-default">
+                        <Card key={i} className="group bg-card border-border/50 hover:border-primary/30 transition duration-300 hover:shadow-elevated hover:-translate-y-2 cursor-default">
                             <CardContent className="p-6">
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="relative">
                                         <img
                                             src={t.image}
                                             alt={t.name}
-                                            className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all duration-300"
+                                            className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20 group-hover:ring-primary/50 transition duration-300"
                                             loading="lazy"
                                             decoding="async"
                                             width="56"
