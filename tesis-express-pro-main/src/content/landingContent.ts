@@ -132,6 +132,30 @@ export const content = {
     ],
   },
 
+  // OTROS SERVICIOS SECTION
+  otherServices: {
+    title: "Otros",
+    titleHighlight: "Servicios Especializados",
+    subtitle: "Soluciones integrales para que tu tesis supere con éxito los filtros más exigentes.",
+    items: [
+      {
+        title: "Reducción de Plagio",
+        description: "Parafraseo profesional y reestructuración de párrafos para bajar el índice de similitud sin perder el rigor académico.",
+        icon: "ShieldAlert",
+      },
+      {
+        title: "Reducción de IA",
+        description: "Humanización de textos y edición crítica para asegurar que tu trabajo sea reconocido como contenido original y de autoría propia.",
+        icon: "Cpu",
+      },
+      {
+        title: "Reporte de Turnitin",
+        description: "Generamos tu reporte oficial de Similitud + IA para que conozcas tu puntaje real antes de la entrega definitiva.",
+        icon: "FileSearch",
+      },
+    ],
+  },
+
   // AUTORIDAD SECTION
   authority: {
     title: "¿Por qué confiar en Neotesis?",

@@ -21,6 +21,8 @@ const TestimonialsSection = lazy(() => import("@/components/landing/Testimonials
 const AuthoritySection = lazy(() => import("@/components/landing/AuthoritySection"));
 const LeadMagnetSection = lazy(() => import("@/components/landing/LeadMagnetSection"));
 const FaqSection = lazy(() => import("@/components/landing/FaqSection"));
+const ServicesSection = lazy(() => import("@/components/landing/ServicesSection"));
+import ScrollToTop from "@/components/ScrollToTop";
 
 const problemIcons = [HelpCircle, AlertTriangle, TrendingDown, Clock];
 
@@ -151,8 +153,9 @@ const Index = () => {
       </section>
 
       {/* ========== PROBLEMA ========== */}
-      <section className="py-20 bg-secondary/50">
-        <div className="container">
+      <section className="py-20 bg-muted/30 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.03),transparent_40%)]" />
+        <div className="container relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-6 mb-16">
             <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
               {content.problem.title} <span className="text-gradient">{content.problem.titleHighlight}</span>
@@ -174,7 +177,7 @@ const Index = () => {
             })}
           </div>
           <div className="max-w-2xl mx-auto mt-12 text-center">
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-8">
+            <div className="bg-white border border-primary/20 rounded-2xl p-8 shadow-sm">
               <p className="text-xl md:text-2xl font-display font-semibold text-foreground">
                 {content.problem.conclusion} <span className="text-primary">{content.problem.conclusionHighlight}</span>
               </p>
@@ -184,7 +187,8 @@ const Index = () => {
       </section>
 
       {/* ========== SOLUCIÓN ========== */}
-      <section className="py-20 bg-background">
+      <section className="py-20 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(40%_40%_at_50%_50%,hsl(var(--secondary)/0.5),transparent)]" />
         <div className="container">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
@@ -213,6 +217,7 @@ const Index = () => {
           </div>
         </div>
       </section>
+
 
       {/* ========== PROMOCIÓN ========== */}
       <section id="promocion" className="py-20 bg-primary relative overflow-hidden">
@@ -308,6 +313,10 @@ const Index = () => {
         </div>
       </section>
 
+      <Suspense fallback={<div className="h-96 bg-secondary/10" />}>
+        <ServicesSection />
+      </Suspense>
+
       <Suspense fallback={<div className="h-96 bg-background" />}>
         <FaqSection />
       </Suspense>
@@ -343,6 +352,7 @@ const Index = () => {
           </div>
         </div>
       </footer>
+      <ScrollToTop />
     </main>
   );
 };
