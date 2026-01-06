@@ -14,6 +14,7 @@ import {
   Clock,
   CheckCircle,
 } from "lucide-react";
+import ScrollToTop from "@/components/ScrollToTop";
 
 // Lazy Sections
 const HowItWorksSection = lazy(() => import("@/components/landing/HowItWorksSection"));
@@ -22,7 +23,6 @@ const AuthoritySection = lazy(() => import("@/components/landing/AuthoritySectio
 const LeadMagnetSection = lazy(() => import("@/components/landing/LeadMagnetSection"));
 const FaqSection = lazy(() => import("@/components/landing/FaqSection"));
 const ServicesSection = lazy(() => import("@/components/landing/ServicesSection"));
-import ScrollToTop from "@/components/ScrollToTop";
 
 const problemIcons = [HelpCircle, AlertTriangle, TrendingDown, Clock];
 
