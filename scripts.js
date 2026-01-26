@@ -484,15 +484,47 @@ async function fetchAliciaMetadata(id, url, returnTextOnly = false) {
 }
 
 function copyAllBatch() {
-    const citations = Array.from(document.querySelectorAll('#batchList .citation-text'))
-        .map(el => el.innerText)
-        .join('\n\n');
-    navigator.clipboard.writeText(citations).then(() => alert("Todas las citas han sido copiadas."));
+    const citationElements = Array.from(document.querySelectorAll('#batchList .citation-text'));
+    const plainText = citationElements.map(el => el.innerText).join('\n\n');
+    const htmlText = citationElements.map(el => el.innerHTML).join('<br><br>');
+
+    if (navigator.clipboard && window.ClipboardItem) {
+        const clipboardItem = new ClipboardItem({
+            'text/plain': new Blob([plainText], { type: 'text/plain' }),
+            'text/html': new Blob([htmlText], { type: 'text/html' })
+        });
+        navigator.clipboard.write([clipboardItem]).then(() => {
+            alert("Todas las citas han sido copiadas con formato.");
+        }).catch(err => {
+            console.error('Error copying:', err);
+            // Fallback to plain text
+            navigator.clipboard.writeText(plainText).then(() => alert("Citas copiadas (formato básico)."));
+        });
+    } else {
+        // Fallback for older browsers
+        navigator.clipboard.writeText(plainText).then(() => alert("Todas las citas han sido copiadas."));
+    }
 }
 
 function copyToClipboard() {
-    const text = document.getElementById('finalCitationText').innerText;
-    navigator.clipboard.writeText(text).then(() => alert("Copiado"));
+    const element = document.getElementById('finalCitationText');
+    const plainText = element.innerText;
+    const htmlText = element.innerHTML;
+
+    if (navigator.clipboard && window.ClipboardItem) {
+        const clipboardItem = new ClipboardItem({
+            'text/plain': new Blob([plainText], { type: 'text/plain' }),
+            'text/html': new Blob([htmlText], { type: 'text/html' })
+        });
+        navigator.clipboard.write([clipboardItem]).then(() => {
+            alert("Copiado con formato");
+        }).catch(err => {
+            console.error('Error copying:', err);
+            navigator.clipboard.writeText(plainText).then(() => alert("Copiado"));
+        });
+    } else {
+        navigator.clipboard.writeText(plainText).then(() => alert("Copiado"));
+    }
 }
 
 // ============================================================================
@@ -847,7 +879,7 @@ function highlightPdfReference(pageNum, textSnippet = "") {
 
 async function sendMessage() {
     const data = getQuotaData();
-    if (data.count >= MAX_QUOTA || data.tokens >= MAX_TOKENS) {
+    if (!DISABLE_QUOTA && (data.count >= MAX_QUOTA || data.tokens >= MAX_TOKENS)) {
         updateQuotaUI();
         return;
     }
