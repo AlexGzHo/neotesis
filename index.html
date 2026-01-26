@@ -27,8 +27,7 @@
                 <ul>
                     <li><a onclick="showSection('landing')" class="active">Inicio</a></li>
                     <li><a onclick="showSection('apa-tool')">Generador APA</a></li>
-                    <li><a onclick="showSection('url-citer')">Auto-Cita</a></li>
-                    <li><a onclick="showSection('batch-citer')">Cita en Lote</a></li>
+                    <li><a onclick="showSection('citation-tools')">Herramientas de Cita</a></li>
                     <li><a onclick="showSection('sample-calculator')">Muestra</a></li>
                     <li><a onclick="showSection('ai-chat')">Chat con PDF</a></li>
                 </ul>
@@ -87,14 +86,14 @@
                         <h3>Auto-Cita URL/DOI</h3>
                         <p>Genera citas bibliográficas pegando solo el enlace o el DOI. Detecta automáticamente si es
                             una web o artículo científico.</p>
-                        <button class="btn" onclick="showSection('url-citer')">Probar Auto-Cita</button>
+                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('single')">Probar Auto-Cita</button>
                     </div>
                     <div class="tool-card">
                         <i class="fas fa-layer-group"></i>
                         <h3>Cita en Lote</h3>
                         <p>Procesa hasta 20 URLs o DOIs de forma simultánea. Ideal para generar bibliografías completas
                             en segundos.</p>
-                        <button class="btn" onclick="showSection('batch-citer')">Ir a Cita en Lote</button>
+                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('batch')">Ir a Cita en Lote</button>
                     </div>
                     <div class="tool-card">
                         <i class="fas fa-calculator"></i>
@@ -178,123 +177,138 @@
             </div>
         </section>
 
-        <!-- SECCIÓN: CITADOR HÍBRIDO URL/DOI -->
-        <section id="url-citer" class="page-section">
-            <div class="container" style="max-width: 800px;">
+        <!-- SECCIÓN: HERRAMIENTAS DE CITACIÓN -->
+        <section id="citation-tools" class="page-section">
+            <div class="container" style="max-width: 900px;">
                 <div class="section-header">
                     <span class="internal-badge" style="margin-bottom: 1rem; display: inline-block;">IA +
                         Metadatos</span>
-                    <h2>Citar por URL o DOI</h2>
-                    <p>Detecta automáticamente si es un DOI científico o una página web para generar tu cita en
-                        segundos.</p>
+                    <h2>Herramientas de Citación</h2>
+                    <p>Genera citas bibliográficas automáticamente desde URLs, DOIs o procesa múltiples enlaces en lote.</p>
                 </div>
 
-                <div class="calculator-card">
-                    <div class="search-engine-row">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <div class="input-with-icon">
-                                <i class="fas fa-link"></i>
-                                <input type="text" id="webUrl" class="form-control"
-                                    placeholder="Pega un DOI (ej: 10.1016...) o una URL (https://...)">
-                            </div>
-                        </div>
-                        <button class="btn" onclick="fetchCitation()"
-                            style="height: 3.5rem; padding: 0 2rem; border-radius: 12px;">
-                            <i class="fas fa-magic"></i> Generar Cita
+                <!-- Tabs para cambiar entre herramientas -->
+                <div class="citation-tabs" style="margin-bottom: 2rem;">
+                    <div class="tab-buttons" style="display: flex; background: var(--border); border-radius: 12px; padding: 0.25rem; margin-bottom: 2rem;">
+                        <button class="tab-btn active" onclick="switchCitationTool('single')" style="flex: 1; padding: 0.75rem 1rem; border: none; background: white; color: var(--primary); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fas fa-magic"></i> Auto-Cita (Individual)
+                        </button>
+                        <button class="tab-btn" onclick="switchCitationTool('batch')" style="flex: 1; padding: 0.75rem 1rem; border: none; background: transparent; color: var(--text-gray); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fas fa-layer-group"></i> Cita en Lote
                         </button>
                     </div>
-
-                    <!-- Indicador de carga -->
-                    <div id="loadingIndicator"
-                        style="display:none; text-align: center; margin-top: 2rem; color: var(--accent); font-weight: 600;">
-                        <i class="fas fa-spinner fa-spin"></i> Analizando datos en registros académicos...
-                    </div>
-
-                    <!-- Resultado -->
-                    <div id="urlResult" class="result-box"
-                        style="display:none; text-align: left; margin-top: 2.5rem; background: white; border: 1px solid var(--border); padding: 2rem; border-radius: 16px;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                            <span
-                                style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--text-gray); letter-spacing: 0.05em;">Cita
-                                APA 7ma Generada</span>
-                            <button onclick="copyToClipboard()"
-                                style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="far fa-copy"></i> Copiar
-                            </button>
-                        </div>
-                        <div id="finalCitationText"
-                            style="font-size: 1rem; line-height: 1.6; color: var(--primary); font-family: 'Inter', sans-serif;">
-                        </div>
-                    </div>
                 </div>
 
-                <div
-                    style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
-                    <p><b>Tip Pro:</b> Los DOIs (Digital Object Identifiers) garantizan la mayor precisión en artículos
-                        científicos. Si usas una URL, intentaremos extraer los metadatos de la página.
-                        <b>¿Tienes muchos enlaces?</b> Prueba <a onclick="showSection('batch-citer')"
-                            style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">Cita
-                            en Lote</a>.
-                    </p>
-                </div>
-            </div>
-        </section>
+                <!-- Contenedor de herramientas -->
+                <div id="citation-content">
+                    <!-- HERRAMIENTA 1: AUTO-CITA INDIVIDUAL -->
+                    <div id="single-citation-tool" class="citation-tool active">
+                        <div class="calculator-card">
+                            <div class="search-engine-row">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <div class="input-with-icon">
+                                        <i class="fas fa-link"></i>
+                                        <input type="text" id="webUrl" class="form-control"
+                                            placeholder="Pega un DOI (ej: 10.1016...) o una URL (https://...)">
+                                    </div>
+                                </div>
+                                <button class="btn" onclick="fetchCitation()"
+                                    style="height: 3.5rem; padding: 0 2rem; border-radius: 12px;">
+                                    <i class="fas fa-magic"></i> Generar Cita
+                                </button>
+                            </div>
 
-        <!-- SECCIÓN: CITADOR EN LOTE -->
-        <section id="batch-citer" class="page-section">
-            <div class="container" style="max-width: 900px;">
-                <div class="section-header">
-                    <span class="internal-badge" style="margin-bottom: 1rem; display: inline-block;">Procesamiento
-                        Masivo</span>
-                    <h2>Citación en Lote (Múltiples URLs)</h2>
-                    <p>Pega hasta 20 enlaces o DOIs (uno por línea) para procesarlos todos a la vez.</p>
-                </div>
+                            <!-- Indicador de carga -->
+                            <div id="loadingIndicator"
+                                style="display:none; text-align: center; margin-top: 2rem; color: var(--accent); font-weight: 600;">
+                                <i class="fas fa-spinner fa-spin"></i> Analizando datos en registros académicos...
+                            </div>
 
-                <div class="calculator-card">
-                    <div class="form-group">
-                        <label>Lista de Enlaces o DOIs (uno por línea)</label>
-                        <textarea id="batchUrls" class="form-control" rows="8"
-                            style="font-family: monospace; font-size: 0.9rem; padding: 1rem; resize: vertical;"
-                            placeholder="https://repositorio.upao.edu.pe/item/...\n10.1016/j.socscimed...\nhttps://repositorio.ucv.edu.pe/..."></textarea>
-                    </div>
-
-                    <button class="btn" onclick="fetchBatchCitations()"
-                        style="width: 100%; height: 3.5rem; margin-top: 1rem;">
-                        <i class="fas fa-layer-group"></i> Procesar Todo el Lote
-                    </button>
-
-                    <!-- Progreso -->
-                    <div id="batchProgress" style="display:none; margin-top: 2rem;">
-                        <div
-                            style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">
-                            <span id="batchStatusText">Procesando...</span>
-                            <span id="batchPercentText">0%</span>
-                        </div>
-                        <div style="height: 8px; background: var(--border); border-radius: 10px; overflow: hidden;">
-                            <div id="batchProgressBar"
-                                style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;">
+                            <!-- Resultado -->
+                            <div id="urlResult" class="result-box"
+                                style="display:none; text-align: left; margin-top: 2.5rem; background: white; border: 1px solid var(--border); padding: 2rem; border-radius: 16px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                                    <span
+                                        style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--text-gray); letter-spacing: 0.05em;">Cita
+                                        APA 7ma Generada</span>
+                                    <button onclick="copyToClipboard()"
+                                        style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="far fa-copy"></i> Copiar
+                                    </button>
+                                </div>
+                                <div id="finalCitationText"
+                                    style="font-size: 1rem; line-height: 1.6; color: var(--primary); font-family: 'Inter', sans-serif;">
+                                </div>
                             </div>
                         </div>
+
+                        <div
+                            style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
+                            <p><b>Tip Pro:</b> Los DOIs (Digital Object Identifiers) garantizan la mayor precisión en artículos
+                                científicos. Si usas una URL, intentaremos extraer los metadatos de la página.
+                                <b>¿Tienes muchos enlaces?</b> Cambia a <a onclick="switchCitationTool('batch')"
+                                    style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">Cita en Lote</a>.
+                            </p>
+                        </div>
                     </div>
 
-                    <!-- Resultados en Lote -->
-                    <div id="batchResultContainer" style="display:none; margin-top: 2.5rem;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                            <h3 style="font-size: 1.1rem; margin: 0;">Referencias Generadas</h3>
-                            <button onclick="copyAllBatch()" class="btn btn-secondary"
-                                style="padding: 0.5rem 1rem; font-size: 0.85rem;">
-                                <i class="far fa-copy"></i> Copiar Todo el Lote
+                    <!-- HERRAMIENTA 2: CITA EN LOTE -->
+                    <div id="batch-citation-tool" class="citation-tool">
+                        <div class="calculator-card">
+                            <div class="form-group">
+                                <label>Lista de Enlaces o DOIs (uno por línea)</label>
+                                <textarea id="batchUrls" class="form-control" rows="8"
+                                    style="font-family: monospace; font-size: 0.9rem; padding: 1rem; resize: vertical;"
+                                    placeholder="https://repositorio.upao.edu.pe/item/...\n10.1016/j.socscimed...\nhttps://repositorio.ucv.edu.pe/..."></textarea>
+                            </div>
+
+                            <button class="btn" onclick="fetchBatchCitations()"
+                                style="width: 100%; height: 3.5rem; margin-top: 1rem;">
+                                <i class="fas fa-layer-group"></i> Procesar Todo el Lote
                             </button>
+
+                            <!-- Progreso -->
+                            <div id="batchProgress" style="display:none; margin-top: 2rem;">
+                                <div
+                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">
+                                    <span id="batchStatusText">Procesando...</span>
+                                    <span id="batchPercentText">0%</span>
+                                </div>
+                                <div style="height: 8px; background: var(--border); border-radius: 10px; overflow: hidden;">
+                                    <div id="batchProgressBar"
+                                        style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resultados en Lote -->
+                            <div id="batchResultContainer" style="display:none; margin-top: 2.5rem;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                    <h3 style="font-size: 1.1rem; margin: 0;">Referencias Generadas</h3>
+                                    <button onclick="copyAllBatch()" class="btn btn-secondary"
+                                        style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                        <i class="far fa-copy"></i> Copiar Todo el Lote
+                                    </button>
+                                </div>
+                                <div id="batchList" style="display: flex; flex-direction: column; gap: 1rem;">
+                                    <!-- Las citas se insertarán aquí -->
+                                </div>
+                            </div>
                         </div>
-                        <div id="batchList" style="display: flex; flex-direction: column; gap: 1rem;">
-                            <!-- Las citas se insertarán aquí -->
+
+                        <div
+                            style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
+                            <p><b>Tip Pro:</b> Puedes procesar hasta 20 enlaces simultáneamente. Si tienes pocos enlaces, prueba la <a onclick="switchCitationTool('single')"
+                                style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">Auto-Cita Individual</a> para una experiencia más rápida.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+
 
         <!-- SECCIÓN 3: CALCULADORA DE MUESTRA -->
         <section id="sample-calculator" class="page-section" style="padding: 1.5rem 0;">

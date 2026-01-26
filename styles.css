@@ -743,3 +743,26 @@ footer p {
         height: 450px;
     }
 }
+
+/* --- Citation Tools Tabs --- */
+.citation-tool {
+    display: none;
+}
+
+.citation-tool.active {
+    display: block;
+}
+
+.tab-btn.active {
+    background: white !important;
+    color: var(--primary) !important;
+}
+
+.tab-btn {
+    transition: all 0.3s ease;
+}
+
+.tab-btn:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.5) !important;
+    color: var(--primary) !important;
+}

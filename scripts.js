@@ -712,3 +712,37 @@ async function sendMessage() {
 function handleEnter(e) {
     if (e.key === 'Enter') sendMessage();
 }
+
+// Función para cambiar entre herramientas de citación
+function switchCitationTool(tool) {
+    // Ocultar todas las herramientas
+    const tools = document.querySelectorAll('.citation-tool');
+    tools.forEach(t => t.classList.remove('active'));
+
+    // Mostrar la herramienta seleccionada
+    const selectedTool = document.getElementById(`${tool}-citation-tool`);
+    if (selectedTool) {
+        selectedTool.classList.add('active');
+    }
+
+    // Actualizar botones de tabs
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+
+    // Encontrar y activar el botón correspondiente
+    const activeButton = Array.from(tabButtons).find(btn =>
+        btn.onclick.toString().includes(tool)
+    );
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+
+    // Limpiar resultados anteriores cuando se cambia de herramienta
+    if (tool === 'single') {
+        document.getElementById('urlResult').style.display = 'none';
+        document.getElementById('loadingIndicator').style.display = 'none';
+    } else if (tool === 'batch') {
+        document.getElementById('batchResultContainer').style.display = 'none';
+        document.getElementById('batchProgress').style.display = 'none';
+    }
+}
