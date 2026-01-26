@@ -744,5 +744,7 @@ function switchCitationTool(tool) {
     } else if (tool === 'batch') {
         document.getElementById('batchResultContainer').style.display = 'none';
         document.getElementById('batchProgress').style.display = 'none';
+    } else if (tool === 'manual') {
+        document.getElementById('apaResult').style.display = 'none';
     }
 }
