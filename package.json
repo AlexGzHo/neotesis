@@ -1,0 +1,27 @@
+{
+  "name": "neotesis-peru",
+  "version": "1.0.0",
+  "description": "Plataforma académica con generador de citas APA, chat PDF con IA y calculadoras",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build needed'",
+    "deploy": "echo 'Deploy to Railway'"
+  },
+  "keywords": [
+    "academic",
+    "citations",
+    "apa",
+    "pdf",
+    "ai",
+    "chat"
+  ],
+  "author": "Neotesis Perú",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {}
+}

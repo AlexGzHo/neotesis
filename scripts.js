@@ -1,4 +1,22 @@
 // scripts.js - Motor de Citación y Análisis Neotesis Perú
+// Versión 2.0 - Arquitectura Serverless Segura
+
+// ============================================================================
+// CONFIGURACIÓN GLOBAL
+// ============================================================================
+
+const MAX_QUOTA = 3;
+const MAX_TOKENS = 100000;
+const QUOTA_RESET_TIME = 24 * 60 * 60 * 1000; // 24 horas en ms
+const MAX_PDF_CONTEXT = 12000; // Máximo de caracteres del PDF
+
+let pdfText = "";
+let history = [];
+let quotaInterval = null;
+
+// ============================================================================
+// NAVEGACIÓN Y UI GENERAL
+// ============================================================================
 
 function showSection(sectionId) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
@@ -7,7 +25,6 @@ function showSection(sectionId) {
 
     document.querySelectorAll('nav a').forEach(a => {
         a.classList.remove('active');
-        // Si el href o el onclick coincide con el id de la sección
         if (a.getAttribute('onclick')?.includes(`'${sectionId}'`)) {
             a.classList.add('active');
         }
@@ -20,7 +37,76 @@ function openWhatsApp() {
     window.open("https://wa.me/51900000000?text=Hola,%20necesito%20asesoría%20con%20mi%20tesis", "_blank");
 }
 
-// --- LÓGICA CALCULADORA DE MUESTRA ---
+// ============================================================================
+// GENERADOR APA MANUAL
+// ============================================================================
+
+function toggleApaFields() {
+    const type = document.getElementById('apaType').value;
+    const fieldPublisher = document.getElementById('fieldPublisher');
+    const fieldJournal = document.getElementById('fieldJournal');
+    const fieldUrl = document.getElementById('fieldUrl');
+
+    // Resetear visibilidad
+    fieldPublisher.style.display = 'none';
+    fieldJournal.style.display = 'none';
+    fieldUrl.style.display = 'none';
+
+    // Mostrar campos según el tipo
+    if (type === 'book') {
+        fieldPublisher.style.display = 'block';
+    } else if (type === 'journal') {
+        fieldJournal.style.display = 'block';
+    } else if (type === 'web') {
+        fieldUrl.style.display = 'block';
+    }
+}
+
+function generateAPA() {
+    const type = document.getElementById('apaType').value;
+    const author = document.getElementById('apaAuthor').value.trim();
+    const year = document.getElementById('apaYear').value.trim();
+    const title = document.getElementById('apaTitle').value.trim();
+
+    if (!author || !year || !title) {
+        alert('Por favor completa todos los campos obligatorios.');
+        return;
+    }
+
+    let citation = '';
+
+    if (type === 'book') {
+        const publisher = document.getElementById('apaPublisher').value.trim();
+        if (!publisher) {
+            alert('Por favor ingresa la editorial.');
+            return;
+        }
+        citation = `${author} (${year}). <i>${title}</i>. ${publisher}.`;
+    } else if (type === 'journal') {
+        const journal = document.getElementById('apaJournal').value.trim();
+        if (!journal) {
+            alert('Por favor ingresa el nombre de la revista.');
+            return;
+        }
+        citation = `${author} (${year}). ${title}. <i>${journal}</i>.`;
+    } else if (type === 'web') {
+        const url = document.getElementById('apaUrl').value.trim();
+        if (!url) {
+            alert('Por favor ingresa la URL.');
+            return;
+        }
+        citation = `${author} (${year}). <i>${title}</i>. ${url}`;
+    }
+
+    const resultBox = document.getElementById('apaResult');
+    resultBox.innerHTML = citation;
+    resultBox.style.display = 'block';
+}
+
+// ============================================================================
+// CALCULADORA DE MUESTRA
+// ============================================================================
+
 function calculateSample() {
     const N = parseInt(document.getElementById('popSize').value);
     const Z = parseFloat(document.getElementById('confidence').value);
@@ -47,46 +133,68 @@ function calculateSample() {
     resultDiv.style.opacity = '1';
 }
 
-// --- UTILIDAD DE RED ROBUSTA (TRIPLE PROXY) ---
+// ============================================================================
+// UTILIDAD DE RED - PROXY SERVERLESS
+// ============================================================================
+
+/**
+ * Fetch con proxy serverless (reemplaza los proxies públicos)
+ * @param {string} url - URL a fetchear
+ * @param {boolean} asJson - Si se espera JSON como respuesta
+ * @returns {Promise<any>} - Contenido de la respuesta
+ */
 async function fetchWithProxy(url, asJson = true) {
-    const proxies = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-        `https://corsproxy.io/?${encodeURIComponent(url)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
-    ];
+    try {
+        console.log(`Fetching via serverless proxy: ${url}`);
 
-    let lastError = null;
-    for (let proxy of proxies) {
-        try {
-            console.log(`Buscando vía: ${proxy.split('?')[0]}`);
-            const response = await fetch(proxy);
-            if (response.ok) {
-                const text = await response.text();
-                let contents = text;
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: url,
+                type: 'single'
+            })
+        });
 
-                if (proxy.includes("allorigins")) {
-                    try {
-                        const outer = JSON.parse(text);
-                        contents = outer.contents;
-                    } catch (e) { }
-                }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
 
-                if (contents) {
-                    if (asJson) {
-                        try { return JSON.parse(contents); } catch (e) { return contents; }
-                    }
-                    return contents;
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.error || 'Error desconocido del proxy');
+        }
+
+        // Extraer el contenido según el tipo
+        if (result.data.type === 'json') {
+            return result.data.content;
+        } else {
+            // HTML o XML
+            const content = result.data.content;
+            if (asJson) {
+                try {
+                    return JSON.parse(content);
+                } catch (e) {
+                    return content;
                 }
             }
-        } catch (e) {
-            console.warn(`Bridge fallido: ${proxy.split('?')[0]}`);
-            lastError = e;
+            return content;
         }
+
+    } catch (error) {
+        console.error('Proxy error:', error);
+        throw error;
     }
-    throw lastError || new Error("LIMIT_REACHED");
 }
 
-// --- LÓGICA DE CITACIÓN UNIFICADA ---
+// ============================================================================
+// LÓGICA DE CITACIÓN UNIFICADA
+// ============================================================================
+
 async function fetchCitation() {
     let urlInput = document.getElementById('webUrl').value.trim();
     const resultBox = document.getElementById('urlResult');
@@ -106,6 +214,8 @@ async function fetchCitation() {
         console.error(error);
         if (error.message.includes("SITIO_PROTEGIDO")) {
             alert("Este sitio web tiene protección avanzada o requiere acceso manual.");
+        } else if (error.message.includes("Dominio no permitido")) {
+            alert("Este dominio no está en la lista de sitios académicos permitidos. Solo se permiten repositorios académicos y bases de datos científicas.");
         } else {
             alert("No se pudo extraer la información automáticamente: " + error.message);
         }
@@ -202,6 +312,7 @@ async function unifiedExtractMetadata(urlInput) {
 
 async function getDoiMetadata(doi) {
     try {
+        // CrossRef API es pública y no requiere proxy
         const res = await fetch(`https://api.crossref.org/works/${doi}`);
         const data = await res.json();
         return data.message || null;
@@ -215,7 +326,7 @@ function normalizeTitle(text) {
     let t = text.trim().toLowerCase();
     t = t.charAt(0).toUpperCase() + t.slice(1);
     // Capitalizar después de puntuación
-    t = t.replace(/([:.\?\!]\s+)([a-z0-9])/g, (m, p1, p2) => p1 + p2.toUpperCase());
+    t = t.replace(/([:.\\?\\!]\\s+)([a-z0-9])/g, (m, p1, p2) => p1 + p2.toUpperCase());
     // Siglas
     const acronyms = ["VIH", "ONU", "TIC", "TICs", "IA", "PDF", "COVID-19", "APA", "DOI", "UPAO", "UCV"];
     acronyms.forEach(a => {
@@ -273,7 +384,7 @@ function formatCitationAPA7(meta, identifier) {
 function formatCitationFromMetadata(data, identifier) {
     const meta = {
         authorsList: (data.author || []).map(a => `${a.family}, ${a.given || ''}`),
-        year: data.created?.["date-parts"]?.[0]?.[0] || "s. f.",
+        year: data.created?.[" date-parts"]?.[0]?.[0] || "s. f.",
         title: data.title?.[0] || "Sin título",
         container: data["container-title"]?.[0] || data.publisher,
         volume: data.volume,
@@ -311,7 +422,7 @@ async function fetchBatchCitations() {
     let completed = 0;
     const total = urls.length;
 
-    // Procesar uno por uno para control de UI y evitar bloqueos de proxy
+    // Procesar uno por uno para control de UI
     for (let url of urls) {
         statusText.innerText = `Procesando: ${url.substring(0, 40)}...`;
         const citation = await processSingleUrl(url.trim());
@@ -343,7 +454,6 @@ async function processSingleUrl(urlInput) {
     return await unifiedExtractMetadata(urlInput);
 }
 
-// Función auxiliar para centralizar la búsqueda en Alicia
 async function fetchAliciaMetadata(id, url, returnTextOnly = false) {
     try {
         const res = await fetchWithProxy(`https://alicia.concytec.gob.pe/vufind/Search/Results?lookfor=${id}`, false);
@@ -383,14 +493,9 @@ function copyToClipboard() {
     navigator.clipboard.writeText(text).then(() => alert("Copiado"));
 }
 
-// --- CHAT IA ---
-const GROQ_API_KEY = "PLACEHOLDER_KEY_NETLIFY";
-const MAX_QUOTA = 3;
-const MAX_TOKENS = 100000;
-const QUOTA_RESET_TIME = 24 * 60 * 60 * 1000; // 24 horas en ms
-let pdfText = "";
-let history = [];
-let quotaInterval = null;
+// ============================================================================
+// CHAT IA - SISTEMA DE CUOTAS
+// ============================================================================
 
 // Inicializar cuota al cargar
 document.addEventListener('DOMContentLoaded', () => {
@@ -455,7 +560,7 @@ function updateQuotaUI() {
             sendBtn.innerHTML = '<i class="fas fa-ban"></i> Servicio Inactivo';
             sendBtn.style.background = '#94a3b8';
             sendBtn.style.cursor = 'not-allowed';
-            sendBtn.style.width = 'auto'; // Ajuste para el texto largo
+            sendBtn.style.width = 'auto';
         }
 
         timerDiv.style.display = 'block';
@@ -506,6 +611,10 @@ function startQuotaCountdown(resetTimestamp) {
     }, 1000);
 }
 
+// ============================================================================
+// CHAT IA - MANEJO DE PDF
+// ============================================================================
+
 async function handlePdfUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -518,10 +627,17 @@ async function handlePdfUpload(input) {
             const content = await page.getTextContent();
             text += content.items.map(item => item.str).join(' ') + " ";
         }
-        pdfText = text.substring(0, 12000);
+        pdfText = text.substring(0, MAX_PDF_CONTEXT);
         document.getElementById('pdfStatus').innerText = "PDF listo.";
-    } catch (e) { alert("Error PDF"); }
+    } catch (e) {
+        alert("Error al procesar el PDF. Verifica que sea un archivo válido.");
+        console.error("PDF Error:", e);
+    }
 }
+
+// ============================================================================
+// CHAT IA - ENVÍO DE MENSAJES (SERVERLESS)
+// ============================================================================
 
 async function sendMessage() {
     const data = getQuotaData();
@@ -538,14 +654,37 @@ async function sendMessage() {
     history.push({ role: "user", content: msg });
 
     try {
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        // Llamar a la API
+        const res = await fetch("/api/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages: [{ role: "system", content: "Asistente Neotesis Perú. Contexto: " + pdfText }, ...history]
+                messages: history,
+                pdfContext: pdfText
             })
         });
+
+        // Manejar rate limiting del servidor
+        if (res.status === 429) {
+            const errorData = await res.json();
+            const resetTime = new Date(errorData.resetTime);
+            chat.innerHTML += `<div class="msg ai" style="color: #ef4444;">Has excedido el límite de consultas diarias. El servicio se restablecerá el ${resetTime.toLocaleString('es-PE')}.</div>`;
+
+            // Actualizar cuota local para reflejar el bloqueo del servidor
+            if (!data.firstUsed) data.firstUsed = Date.now();
+            data.count = MAX_QUOTA;
+            localStorage.setItem('neotesis_quota', JSON.stringify(data));
+            updateQuotaUI();
+            return;
+        }
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `HTTP ${res.status}`);
+        }
+
         const responseData = await res.json();
         const reply = responseData.choices[0].message.content;
         chat.innerHTML += `<div class="msg ai">${reply}</div>`;
@@ -555,17 +694,21 @@ async function sendMessage() {
         // Actualizar cuota tras éxito
         if (!data.firstUsed) data.firstUsed = Date.now();
         data.count++;
+
         // Registrar tokens si la API los devuelve
         if (responseData.usage && responseData.usage.total_tokens) {
             data.tokens += responseData.usage.total_tokens;
         }
+
         localStorage.setItem('neotesis_quota', JSON.stringify(data));
         updateQuotaUI();
 
     } catch (e) {
         console.error("Chat Error:", e);
-        chat.innerHTML += `<div class="msg ai" style="color: #ef4444;">Error de conexión: ${e.message || 'Servicio no disponible'}. Revisa la consola para más detalles.</div>`;
+        chat.innerHTML += `<div class="msg ai" style="color: #ef4444;">Error de conexión: ${e.message || 'Servicio no disponible'}. Verifica tu conexión e intenta de nuevo.</div>`;
     }
 }
-function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
 
+function handleEnter(e) {
+    if (e.key === 'Enter') sendMessage();
+}
