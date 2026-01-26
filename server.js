@@ -153,9 +153,10 @@ app.post('/api/chat', async (req, res) => {
       req.ip ||
       'unknown';
 
-    const rateLimitStatus = checkRateLimit(clientIP);
+    if (process.env.DISABLE_RATE_LIMIT !== 'true') {
+      const rateLimitStatus = checkRateLimit(clientIP);
 
-    if (!rateLimitStatus.allowed) {
+      if (!rateLimitStatus.allowed) {
       const resetDate = new Date(rateLimitStatus.resetTime);
       res.set({
         'X-RateLimit-Limit': MAX_REQUESTS_PER_IP.toString(),
@@ -169,6 +170,7 @@ app.post('/api/chat', async (req, res) => {
         resetTime: resetDate.toISOString(),
         message: 'El servicio se restablecerá en las próximas 24 horas desde tu primera consulta'
       });
+    }
     }
 
     const apiKey = process.env.GROQ_API_KEY;
