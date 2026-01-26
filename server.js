@@ -173,11 +173,12 @@ app.post('/api/chat', async (req, res) => {
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      console.error('GROQ_API_KEY no está configurada');
+      console.error('GROQ_API_KEY no está configurada en las variables de entorno');
       return res.status(500).json({
         error: 'Error de configuración del servidor. Contacta al administrador.'
       });
     }
+    console.log('GROQ_API_KEY encontrada, longitud:', apiKey.length);
 
     const messages = [];
 
@@ -195,6 +196,7 @@ app.post('/api/chat', async (req, res) => {
 
     messages.push(...body.messages);
 
+    console.log('Enviando solicitud a Groq API con', messages.length, 'mensajes');
     const groqResponse = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
@@ -209,9 +211,10 @@ app.post('/api/chat', async (req, res) => {
       })
     });
 
+    console.log('Respuesta de Groq API status:', groqResponse.status);
     if (!groqResponse.ok) {
       const errorText = await groqResponse.text();
-      console.error('Error de Groq API:', errorText);
+      console.error('Error de Groq API:', groqResponse.status, errorText);
 
       if (groqResponse.status === 401) {
         return res.status(500).json({
@@ -231,6 +234,15 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const groqData = await groqResponse.json();
+
+    // Verificar que la respuesta tenga la estructura esperada
+    if (!groqData.choices || !Array.isArray(groqData.choices) || groqData.choices.length === 0) {
+      console.error('Respuesta de Groq API inválida:', groqData);
+      return res.status(500).json({
+        error: 'Respuesta inválida del servicio de IA',
+        message: groqData.error || 'La API no devolvió una respuesta válida'
+      });
+    }
 
     res.set({
       'X-RateLimit-Limit': MAX_REQUESTS_PER_IP.toString(),
