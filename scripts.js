@@ -9,6 +9,7 @@ const MAX_QUOTA = 3;
 const MAX_TOKENS = 100000;
 const QUOTA_RESET_TIME = 24 * 60 * 60 * 1000; // 24 horas en ms
 const MAX_PDF_CONTEXT = 12000; // Máximo de caracteres del PDF
+const DISABLE_QUOTA = true; // Temporal para testing
 
 let pdfText = "";
 let pdfContextForAI = ""; // Contexto con marcadores por página para referencias
@@ -545,7 +546,7 @@ function updateQuotaUI() {
     }
 
     // Manejo de colores de la barra y estado del botón
-    if (remainingRequests === 0 || remainingTokens === 0) {
+    if ((remainingRequests === 0 || remainingTokens === 0) && !DISABLE_QUOTA) {
         quotaBar.style.background = '#ef4444';
         userInput.disabled = true;
         userInput.placeholder = "Servicio Inactivo";
