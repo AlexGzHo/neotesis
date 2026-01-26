@@ -23,7 +23,8 @@ app.use((req, res, next) => {
 
 // Configuración para chat
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const PRIMARY_MODEL = 'llama-3.1-8b-instant';
+const SECONDARY_MODEL = 'llama-3.3-70b-versatile';
 const MAX_CONTEXT_LENGTH = 12000;
 const MAX_REQUESTS_PER_IP = 3;
 const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 horas en ms
@@ -216,22 +217,32 @@ ${body.pdfContext}`
 
     messages.push(...body.messages);
 
-    console.log('Enviando solicitud a Groq API con', messages.length, 'mensajes');
-    const groqResponse = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2048
-      })
-    });
+    // Función auxiliar para intentar la API con un modelo
+    async function tryGroqAPI(model) {
+      return await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: messages,
+          temperature: 0.7,
+          max_tokens: 2048
+        })
+      });
+    }
 
-    console.log('Respuesta de Groq API status:', groqResponse.status);
+    console.log('Enviando solicitud a Groq API con', messages.length, 'mensajes');
+    let groqResponse = await tryGroqAPI(PRIMARY_MODEL);
+    console.log('Respuesta de Groq API (primary) status:', groqResponse.status);
+
+    if (groqResponse.status === 429) {
+      console.log('Modelo primario limitado por tasa, intentando modelo secundario');
+      groqResponse = await tryGroqAPI(SECONDARY_MODEL);
+      console.log('Respuesta de Groq API (secondary) status:', groqResponse.status);
+    }
     if (!groqResponse.ok) {
       const errorText = await groqResponse.text();
       console.error('Error de Groq API:', groqResponse.status, errorText);
