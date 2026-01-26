@@ -21,15 +21,15 @@ Plataforma académica integral con generador de citas APA, chat PDF con IA y cal
 
 ```mermaid
 graph TB
-    A[Cliente - Navegador] -->|HTTPS| B[Netlify CDN]
+    A[Cliente - Navegador] -->|HTTPS| B[Railway App]
     B --> C[index.html + styles.css]
     B --> D[scripts.js]
-    D -->|POST /api/chat| E[Netlify Function: chat.js]
-    D -->|POST /api/proxy| F[Netlify Function: proxy.js]
+    D -->|POST /api/chat| E[Express Route: /api/chat]
+    D -->|POST /api/proxy| F[Express Route: /api/proxy]
     E -->|API Key segura| G[Groq API]
     F -->|User-Agent académico| H[Repositorios/APIs]
     E -->|Rate Limiting por IP| I[3 requests/24h]
-    
+
     style E fill:#10b981
     style F fill:#3b82f6
     style G fill:#f59e0b
@@ -44,7 +44,7 @@ graph TB
 ✅ **Validación de inputs**: Todas las entradas del usuario son validadas y sanitizadas  
 ✅ **Headers de seguridad**: CSP, X-Frame-Options, etc.
 
-## 🚀 Deployment en Netlify
+## 🚀 Deployment en Railway
 
 ### Paso 1: Obtener una Groq API Key
 
@@ -64,72 +64,52 @@ graph TB
 git clone https://github.com/TU_USUARIO/neotesis.git
 cd neotesis
 
-# Instalar dependencias (solo para desarrollo local)
+# Instalar dependencias
 npm install
 ```
 
-### Paso 3: Deploy en Netlify
-
-#### Opción A: Deploy desde GitHub (Recomendado)
+### Paso 3: Deploy en Railway
 
 1. **Sube tu código a GitHub**:
    ```bash
    git add .
-   git commit -m "Migración a arquitectura serverless segura"
+   git commit -m "Migración a Railway con Express"
    git push origin main
    ```
 
-2. **Conecta con Netlify**:
-   - Ve a [app.netlify.com](https://app.netlify.com/)
-   - Haz clic en **Add new site** → **Import an existing project**
-   - Selecciona **GitHub** y autoriza Netlify
+2. **Conecta con Railway**:
+   - Ve a [railway.app](https://railway.app/)
+   - Crea una cuenta o inicia sesión
+   - Haz clic en **New Project** → **Deploy from GitHub repo**
+   - Autoriza Railway para acceder a GitHub
    - Selecciona tu repositorio `neotesis`
 
-3. **Configurar el build**:
-   - **Build command**: `echo 'Static site ready'` (ya está en netlify.toml)
-   - **Publish directory**: `.` (ya está en netlify.toml)
-   - **Functions directory**: `netlify/functions` (ya está en netlify.toml)
+3. **Railway detectará automáticamente**:
+   - El proyecto Node.js
+   - El comando `npm start`
+   - Puerto automático (process.env.PORT)
 
 4. **Agregar variable de entorno**:
-   - En Netlify Dashboard, ve a **Site settings** → **Environment variables**
-   - Haz clic en **Add a variable**
+   - En el dashboard de Railway, ve a tu proyecto
+   - Ve a **Variables** en el menú lateral
+   - Haz clic en **Add Variable**
    - **Key**: `GROQ_API_KEY`
    - **Value**: Tu API key de Groq (ej: `gsk_...`)
-   - **Scopes**: Marca "Same value for all deploy contexts"
-   - Haz clic en **Create variable**
+   - Haz clic en **Add**
 
-5. **Deploy**:
-   - Haz clic en **Deploy site**
-   - Espera a que el build complete (~30 segundos)
-   - ¡Tu sitio estará live en `https://tu-sitio.netlify.app`!
-
-#### Opción B: Deploy con Netlify CLI
-
-```bash
-# Instalar Netlify CLI globalmente
-npm install -g netlify-cli
-
-# Login en Netlify
-netlify login
-
-# Inicializar el sitio
-netlify init
-
-# Configurar variable de entorno
-netlify env:set GROQ_API_KEY "tu_key_aqui"
-
-# Deploy a producción
-netlify deploy --prod
-```
+5. **Deploy automático**:
+   - Railway comenzará el build automáticamente
+   - Espera a que complete (~2-3 minutos)
+   - ¡Tu sitio estará live en la URL generada por Railway!
 
 ### Paso 4: Verificar el Deployment
 
-1. **Verificar que las functions se desplegaron**:
-   - En Netlify Dashboard → **Functions**
-   - Deberías ver `chat` y `proxy` listadas
+1. **Verificar que la app está corriendo**:
+   - En Railway Dashboard → **Deployments**
+   - Deberías ver el deployment exitoso
 
 2. **Probar el sitio**:
-   - Abre tu sitio en el navegador
+   - Abre la URL de Railway en el navegador
    - Ve a **Chat con PDF**
    - Sube un PDF de prueba
    - Haz una pregunta
@@ -156,25 +136,21 @@ npm install
 # Crear archivo .env en la raíz del proyecto
 echo "GROQ_API_KEY=tu_key_aqui" > .env
 
-# Iniciar servidor de desarrollo con Netlify CLI
-netlify dev
+# Iniciar servidor de desarrollo
+npm start
 ```
 
-El sitio estará disponible en `http://localhost:8888`
+El sitio estará disponible en `http://localhost:3000`
 
 ### Estructura del Proyecto
 
 ```
 neotesis/
-├── netlify/
-│   └── functions/
-│       ├── chat.js          # Proxy seguro para Groq API
-│       └── proxy.js         # Proxy para web scraping
+├── server.js                # Servidor Express con rutas API
 ├── index.html               # Página principal
 ├── styles.css               # Estilos
 ├── scripts.js               # Lógica del cliente (SIN API keys)
 ├── hero.png                 # Imagen hero
-├── netlify.toml             # Configuración de Netlify
 ├── package.json             # Dependencias
 ├── .gitignore               # Archivos ignorados por Git
 └── README.md                # Este archivo
@@ -184,12 +160,12 @@ neotesis/
 
 ### Error: "GROQ_API_KEY no está configurada"
 
-**Causa**: La variable de entorno no está configurada en Netlify.
+**Causa**: La variable de entorno no está configurada en Railway.
 
 **Solución**:
-1. Ve a Netlify Dashboard → Site settings → Environment variables
+1. Ve a Railway Dashboard → Tu proyecto → Variables
 2. Agrega `GROQ_API_KEY` con tu key de Groq
-3. Redeploy el sitio: Deploys → Trigger deploy → Deploy site
+3. Railway redeployará automáticamente
 
 ### Error: "Dominio no permitido"
 
