@@ -11,6 +11,7 @@ const QUOTA_RESET_TIME = 24 * 60 * 60 * 1000; // 24 horas en ms
 const MAX_PDF_CONTEXT = 12000; // Máximo de caracteres del PDF
 
 let pdfText = "";
+let pdfContextForAI = ""; // Contexto con marcadores por página para referencias
 let history = [];
 let quotaInterval = null;
 
@@ -621,6 +622,75 @@ let totalPages = 0;
 let currentZoom = 1.0;
 let pdfTextByPage = []; // Array para almacenar texto por página
 
+function buildPdfContextForAI() {
+    // Construye un contexto compactado con marcadores por página.
+    // Esto permite que el modelo cite “p. X” de forma más consistente.
+    let ctx = '';
+    for (const p of pdfTextByPage) {
+        const block = `\n\n[PAGE ${p.page}]\n${p.text}`;
+        if ((ctx.length + block.length) > MAX_PDF_CONTEXT) break;
+        ctx += block;
+    }
+    return ctx.trim();
+}
+
+function extractReferencesFromReply(reply) {
+    // Espera formato:
+    // ...respuesta...
+    // REFERENCIAS:
+    // - p. 3: "..."
+    // - p. 7 | "..."
+    const idx = reply.toLowerCase().lastIndexOf('referencias');
+    if (idx === -1) return { answer: reply, refs: [] };
+
+    const answer = reply.slice(0, idx).trim();
+    const tail = reply.slice(idx).split(/\r?\n/).slice(1); // después de la línea “REFERENCIAS:”
+    const refs = [];
+
+    for (const line of tail) {
+        const cleaned = line.trim().replace(/^[-*•]\s*/, '');
+        if (!cleaned) continue;
+        const m = cleaned.match(/p\.?\s*(\d+)\s*(?:[:|—-])\s*(.+)$/i);
+        if (!m) continue;
+        const page = parseInt(m[1], 10);
+        let quote = (m[2] || '').trim();
+        quote = quote.replace(/^"|"$/g, '').replace(/^“|”$/g, '');
+        refs.push({ page, quote });
+    }
+
+    return { answer: answer || reply, refs };
+}
+
+function approxLineFromQuote(pageText, quote) {
+    if (!pageText || !quote) return null;
+    const hay = pageText.toLowerCase();
+    const needle = quote.toLowerCase();
+
+    // Intento 1: búsqueda literal
+    let idx = hay.indexOf(needle);
+    // Intento 2: búsqueda por prefijo para tolerar pequeñas diferencias
+    if (idx === -1) {
+        const prefix = needle.slice(0, 40);
+        if (prefix.length >= 12) idx = hay.indexOf(prefix);
+    }
+    if (idx === -1) return null;
+
+    // Aproximación: “líneas” en función de caracteres (sin layout real del PDF)
+    const CHARS_PER_LINE = 120;
+    return Math.floor(idx / CHARS_PER_LINE) + 1;
+}
+
+function wireReferenceClicks(containerEl) {
+    const refs = containerEl.querySelectorAll('.pdf-reference[data-page]');
+    refs.forEach(el => {
+        el.addEventListener('click', () => {
+            const page = parseInt(el.getAttribute('data-page'), 10);
+            const quote = el.getAttribute('data-quote') || '';
+            highlightPdfReference(page, quote);
+        });
+    });
+}
+
 async function handlePdfUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -653,6 +723,9 @@ async function handlePdfUpload(input) {
 
         // Limitar el contexto total
         pdfText = pdfText.substring(0, MAX_PDF_CONTEXT);
+
+        // Contexto para IA con marcadores por página
+        pdfContextForAI = buildPdfContextForAI();
 
         // Actualizar UI
         document.getElementById('pdfStatus').innerHTML = '<i class="fas fa-check-circle" style="color: var(--emerald);"></i> PDF cargado correctamente';
@@ -803,7 +876,7 @@ async function sendMessage() {
             },
             body: JSON.stringify({
                 messages: history,
-                pdfContext: pdfText
+                pdfContext: (pdfContextForAI && pdfContextForAI.length > 0) ? pdfContextForAI : pdfText
             })
         });
 
@@ -836,39 +909,53 @@ async function sendMessage() {
         }
 
         const responseData = await res.json();
-        const reply = responseData.choices[0].message.content;
+        const rawReply = responseData.choices[0].message.content;
 
-        // Generar referencias del PDF (simuladas por ahora)
-        let referencesHTML = '';
-        if (pdfDocument && pdfTextByPage.length > 0) {
-            // Buscar páginas que contengan palabras clave de la respuesta
+        // 1) Intentar leer referencias explícitas desde la respuesta
+        const parsed = extractReferencesFromReply(rawReply);
+        const reply = parsed.answer;
+        const refs = parsed.refs;
+
+        // 2) Fallback heurístico si el modelo no devolvió referencias
+        let fallbackPages = [];
+        if (refs.length === 0 && pdfDocument && pdfTextByPage.length > 0) {
             const responseWords = reply.toLowerCase().split(' ');
             const relevantPages = [];
 
             pdfTextByPage.forEach(pageData => {
                 const pageWords = pageData.text.toLowerCase();
-                const matches = responseWords.filter(word =>
-                    word.length > 3 && pageWords.includes(word)
-                );
-                if (matches.length > 0) {
-                    relevantPages.push({
-                        page: pageData.page,
-                        matches: matches.length
-                    });
-                }
+                const matches = responseWords.filter(word => word.length > 3 && pageWords.includes(word));
+                if (matches.length > 0) relevantPages.push({ page: pageData.page, matches: matches.length });
             });
 
-            // Mostrar hasta 3 referencias más relevantes
-            if (relevantPages.length > 0) {
-                referencesHTML = '<div style="margin-top: 1rem;">';
-                referencesHTML += '<strong>Referencias en el documento:</strong><br>';
-                relevantPages.slice(0, 3).forEach(ref => {
-                    referencesHTML += `<div class="pdf-reference" onclick="highlightPdfReference(${ref.page})">
-                        <i class="fas fa-file-alt"></i> Página ${ref.page} - ${ref.matches} coincidencias
-                    </div>`;
-                });
-                referencesHTML += '</div>';
-            }
+            fallbackPages = relevantPages
+                .sort((a, b) => b.matches - a.matches)
+                .slice(0, 3)
+                .map(r => ({ page: r.page, quote: '' }));
+        }
+
+        const refsToRender = refs.length > 0 ? refs : fallbackPages;
+        let referencesHTML = '';
+
+        if (refsToRender.length > 0) {
+            referencesHTML += '<div style="margin-top: 1rem;">';
+            referencesHTML += '<strong>Referencias en el documento:</strong><br>';
+
+            refsToRender.slice(0, 3).forEach(ref => {
+                const pageData = pdfTextByPage.find(p => p.page === ref.page);
+                const approxLine = pageData ? approxLineFromQuote(pageData.text, ref.quote) : null;
+                const lineLabel = approxLine ? ` · línea aprox. ${approxLine}` : '';
+                const quoteLabel = ref.quote ? ` — “${ref.quote}”` : '';
+
+                // data-quote para poder usar addEventListener (evitar problemas por comillas en onclick)
+                const safeQuote = (ref.quote || '').replace(/"/g, '&quot;');
+                referencesHTML += `
+                    <div class="pdf-reference" data-page="${ref.page}" data-quote="${safeQuote}">
+                        <i class="fas fa-file-alt"></i> Página ${ref.page}${lineLabel}${quoteLabel}
+                    </div>
+                `;
+            });
+            referencesHTML += '</div>';
         }
 
         chat.innerHTML += `
@@ -882,7 +969,12 @@ async function sendMessage() {
                 </div>
             </div>
         `;
-        history.push({ role: "assistant", content: reply });
+
+        // Activar clicks de referencias recién insertadas
+        const lastMsg = chat.lastElementChild;
+        if (lastMsg) wireReferenceClicks(lastMsg);
+
+        history.push({ role: "assistant", content: rawReply });
         chat.scrollTop = chat.scrollHeight;
 
         // Actualizar cuota tras éxito

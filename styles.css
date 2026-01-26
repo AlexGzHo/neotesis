@@ -619,6 +619,8 @@ main {
     display: flex;
     flex-direction: column;
     background: var(--white);
+    height: 100%;
+    min-height: 0; /* permite que .messages haga scroll dentro del panel */
 }
 
 /* --- Quota Monitor Styles --- */
@@ -754,6 +756,29 @@ main {
     gap: 1.2rem;
     background: var(--white);
     min-height: 0;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.messages::-webkit-scrollbar {
+    width: 10px;
+}
+
+.messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.messages::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.25);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.4);
+    border: 3px solid transparent;
+    background-clip: content-box;
 }
 
 .msg {

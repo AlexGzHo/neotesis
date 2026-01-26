@@ -182,10 +182,23 @@ app.post('/api/chat', async (req, res) => {
 
     const messages = [];
 
-    if (body.pdfContext && body.pdfContext.trim().length > 0) {
+  if (body.pdfContext && body.pdfContext.trim().length > 0) {
       messages.push({
         role: 'system',
-        content: `Eres un asistente académico de Neotesis Perú. Analiza el siguiente documento PDF y responde preguntas sobre él de manera clara y precisa.\n\nContexto del PDF:\n${body.pdfContext}`
+        content: `Eres un asistente académico de Neotesis Perú. Responde preguntas sobre el siguiente documento PDF de manera clara y precisa.
+
+Reglas IMPORTANTES:
+1) Usa exclusivamente el CONTEXTO del PDF cuando el usuario pregunte sobre el documento.
+2) Si falta información en el PDF, dilo explícitamente.
+3) Al final de tu respuesta agrega una sección EXACTA con este formato:
+
+REFERENCIAS:
+- p. X: "cita textual corta"
+
+Donde X es el número de página. Si el PDF incluye marcadores como [PAGE 3], úsalo para identificar la página.
+
+Contexto del PDF:
+${body.pdfContext}`
       });
     } else {
       messages.push({
