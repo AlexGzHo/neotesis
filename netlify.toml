@@ -1,0 +1,6 @@
+[build]
+  command = "sed -i \"s|PLACEHOLDER_KEY_NETLIFY|$GROQ_API_KEY|g\" scripts.js && grep -q \"$GROQ_API_KEY\" scripts.js && echo 'Verification: Key successfully injected.' || (echo 'Verification FAILED: Key not found in scripts.js' && exit 1)"
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "18"

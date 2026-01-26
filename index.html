@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neotesis Perú - Asesoría y Herramientas Académicas</title>
+    <!-- Fuentes e Iconos -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Librería para leer PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <header>
+        <div class="nav-container">
+            <div class="logo" onclick="showSection('landing')">
+                <i class="fas fa-graduation-cap"></i> Neotesis <span>Perú</span>
+            </div>
+            <nav>
+                <ul>
+                    <li><a onclick="showSection('landing')" class="active">Inicio</a></li>
+                    <li><a onclick="showSection('apa-tool')">Generador APA</a></li>
+                    <li><a onclick="showSection('url-citer')">Auto-Cita</a></li>
+                    <li><a onclick="showSection('batch-citer')">Cita en Lote</a></li>
+                    <li><a onclick="showSection('sample-calculator')">Muestra</a></li>
+                    <li><a onclick="showSection('ai-chat')">Chat con PDF</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- SECCIÓN 1: LANDING PAGE -->
+        <section id="landing" class="page-section active">
+            <!-- HERO -->
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h1>Tu éxito académico, potenciado por IA y Expertos.</h1>
+                    <p>En Neotesis Perú combinamos la mejor asesoría académica con herramientas tecnológicas de última
+                        generación para tu tesis.</p>
+                    <div style="display: flex; gap: 1rem;">
+                        <a onclick="showSection('ai-chat')" class="btn">Probar Chat PDF</a>
+                        <a onclick="openWhatsApp()" class="btn btn-secondary">Asesoría Personalizada</a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="hero.png" alt="Estudiante profesional trabajando">
+                </div>
+            </div>
+
+            <!-- TRUST BAR -->
+            <div class="trust-bar">
+                <div class="trust-container">
+                    <h3>Nuestra experiencia avalada en:</h3>
+                    <div class="university-logos">
+                        <div class="uni-logo"><i class="fas fa-university"></i> UNMSM</div>
+                        <div class="uni-logo"><i class="fas fa-university"></i> UCV</div>
+                        <div class="uni-logo"><i class="fas fa-university"></i> USIL</div>
+                        <div class="uni-logo"><i class="fas fa-university"></i> UPC</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NUESTRAS HERRAMIENTAS -->
+            <div class="tools-section">
+                <div class="section-header">
+                    <h2>Herramientas Gratuitas</h2>
+                    <p>Diseñadas para facilitar cada etapa de tu investigación.</p>
+                </div>
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <i class="fas fa-quote-right"></i>
+                        <h3>Generador APA 7ma</h3>
+                        <p>Cita tus fuentes en segundos con total precisión. Olvídate de los errores manuales en tus
+                            referencias bibliográficas.</p>
+                        <button class="btn" onclick="showSection('apa-tool')">Usar Generador</button>
+                    </div>
+                    <div class="tool-card">
+                        <i class="fas fa-magic"></i>
+                        <h3>Auto-Cita URL/DOI</h3>
+                        <p>Genera citas bibliográficas pegando solo el enlace o el DOI. Detecta automáticamente si es
+                            una web o artículo científico.</p>
+                        <button class="btn" onclick="showSection('url-citer')">Probar Auto-Cita</button>
+                    </div>
+                    <div class="tool-card">
+                        <i class="fas fa-layer-group"></i>
+                        <h3>Cita en Lote</h3>
+                        <p>Procesa hasta 20 URLs o DOIs de forma simultánea. Ideal para generar bibliografías completas
+                            en segundos.</p>
+                        <button class="btn" onclick="showSection('batch-citer')">Ir a Cita en Lote</button>
+                    </div>
+                    <div class="tool-card">
+                        <i class="fas fa-calculator"></i>
+                        <h3>Calculadora de Muestra</h3>
+                        <p>Determina el tamaño de muestra ideal para tu investigación cuantitativa. Soporta poblaciones
+                            finitas e infinitas.</p>
+                        <button class="btn" onclick="showSection('sample-calculator')">Calcular Muestra</button>
+                    </div>
+                    <div class="tool-card">
+                        <i class="fas fa-robot"></i>
+                        <h3>Neotesis IA - Chat PDF</h3>
+                        <p>Sube tu PDF y deja que nuestra IA analice el contenido por ti. Responde preguntas, resume y
+                            localiza información al instante.</p>
+                        <button class="btn" onclick="showSection('ai-chat')">Abrir Chat IA</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FINAL CTA -->
+            <div style="background: var(--primary); color: white; padding: 6rem 2rem; text-align: center;">
+                <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">¿Necesitas ayuda experta con tu tesis?</h2>
+                <p style="opacity: 0.8; margin-bottom: 2.5rem; font-size: 1.2rem;">Contamos con un equipo de
+                    especialistas listos para guiarte en todo el proceso.</p>
+                <a onclick="openWhatsApp()" class="btn btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> Hablar con un Asesor
+                </a>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: GENERADOR APA MANUAL -->
+        <section id="apa-tool" class="page-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Generador de Citas APA (Manual)</h2>
+                    <p>Genera referencias bibliográficas precisas siguiendo las normas APA 7ma Edición.</p>
+                </div>
+                <div class="apa-container">
+                    <div class="form-group">
+                        <label>Tipo de Fuente</label>
+                        <select id="apaType" class="form-control" onchange="toggleApaFields()">
+                            <option value="book">Libro</option>
+                            <option value="journal">Artículo de Revista</option>
+                            <option value="web">Página Web</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Apellido(s), Inicial del Nombre (Autor)</label>
+                        <input type="text" id="apaAuthor" class="form-control" placeholder="Ej: Perez, J.">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Año de Publicación</label>
+                        <input type="number" id="apaYear" class="form-control" placeholder="Ej: 2023">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Título de la obra</label>
+                        <input type="text" id="apaTitle" class="form-control"
+                            placeholder="Ej: Métodos de investigación">
+                    </div>
+
+                    <!-- Campos condicionales -->
+                    <div id="fieldPublisher" class="form-group">
+                        <label>Editorial</label>
+                        <input type="text" id="apaPublisher" class="form-control" placeholder="Ej: Pearson">
+                    </div>
+                    <div id="fieldJournal" class="form-group" style="display:none;">
+                        <label>Nombre de la Revista</label>
+                        <input type="text" id="apaJournal" class="form-control" placeholder="Ej: Revista de Psicología">
+                    </div>
+                    <div id="fieldUrl" class="form-group" style="display:none;">
+                        <label>URL</label>
+                        <input type="text" id="apaUrl" class="form-control" placeholder="https://...">
+                    </div>
+
+                    <button class="btn" onclick="generateAPA()" style="width: 100%;">Generar Cita</button>
+
+                    <div id="apaResult" class="result-box" style="display:none;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: CITADOR HÍBRIDO URL/DOI -->
+        <section id="url-citer" class="page-section">
+            <div class="container" style="max-width: 800px;">
+                <div class="section-header">
+                    <span class="internal-badge" style="margin-bottom: 1rem; display: inline-block;">IA +
+                        Metadatos</span>
+                    <h2>Citar por URL o DOI</h2>
+                    <p>Detecta automáticamente si es un DOI científico o una página web para generar tu cita en
+                        segundos.</p>
+                </div>
+
+                <div class="calculator-card">
+                    <div class="search-engine-row">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <div class="input-with-icon">
+                                <i class="fas fa-link"></i>
+                                <input type="text" id="webUrl" class="form-control"
+                                    placeholder="Pega un DOI (ej: 10.1016...) o una URL (https://...)">
+                            </div>
+                        </div>
+                        <button class="btn" onclick="fetchCitation()"
+                            style="height: 3.5rem; padding: 0 2rem; border-radius: 12px;">
+                            <i class="fas fa-magic"></i> Generar Cita
+                        </button>
+                    </div>
+
+                    <!-- Indicador de carga -->
+                    <div id="loadingIndicator"
+                        style="display:none; text-align: center; margin-top: 2rem; color: var(--accent); font-weight: 600;">
+                        <i class="fas fa-spinner fa-spin"></i> Analizando datos en registros académicos...
+                    </div>
+
+                    <!-- Resultado -->
+                    <div id="urlResult" class="result-box"
+                        style="display:none; text-align: left; margin-top: 2.5rem; background: white; border: 1px solid var(--border); padding: 2rem; border-radius: 16px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <span
+                                style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--text-gray); letter-spacing: 0.05em;">Cita
+                                APA 7ma Generada</span>
+                            <button onclick="copyToClipboard()"
+                                style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="far fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                        <div id="finalCitationText"
+                            style="font-size: 1rem; line-height: 1.6; color: var(--primary); font-family: 'Inter', sans-serif;">
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
+                    <p><b>Tip Pro:</b> Los DOIs (Digital Object Identifiers) garantizan la mayor precisión en artículos
+                        científicos. Si usas una URL, intentaremos extraer los metadatos de la página.
+                        <b>¿Tienes muchos enlaces?</b> Prueba <a onclick="showSection('batch-citer')"
+                            style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">Cita
+                            en Lote</a>.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: CITADOR EN LOTE -->
+        <section id="batch-citer" class="page-section">
+            <div class="container" style="max-width: 900px;">
+                <div class="section-header">
+                    <span class="internal-badge" style="margin-bottom: 1rem; display: inline-block;">Procesamiento
+                        Masivo</span>
+                    <h2>Citación en Lote (Múltiples URLs)</h2>
+                    <p>Pega hasta 20 enlaces o DOIs (uno por línea) para procesarlos todos a la vez.</p>
+                </div>
+
+                <div class="calculator-card">
+                    <div class="form-group">
+                        <label>Lista de Enlaces o DOIs (uno por línea)</label>
+                        <textarea id="batchUrls" class="form-control" rows="8"
+                            style="font-family: monospace; font-size: 0.9rem; padding: 1rem; resize: vertical;"
+                            placeholder="https://repositorio.upao.edu.pe/item/...\n10.1016/j.socscimed...\nhttps://repositorio.ucv.edu.pe/..."></textarea>
+                    </div>
+
+                    <button class="btn" onclick="fetchBatchCitations()"
+                        style="width: 100%; height: 3.5rem; margin-top: 1rem;">
+                        <i class="fas fa-layer-group"></i> Procesar Todo el Lote
+                    </button>
+
+                    <!-- Progreso -->
+                    <div id="batchProgress" style="display:none; margin-top: 2rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">
+                            <span id="batchStatusText">Procesando...</span>
+                            <span id="batchPercentText">0%</span>
+                        </div>
+                        <div style="height: 8px; background: var(--border); border-radius: 10px; overflow: hidden;">
+                            <div id="batchProgressBar"
+                                style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultados en Lote -->
+                    <div id="batchResultContainer" style="display:none; margin-top: 2.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <h3 style="font-size: 1.1rem; margin: 0;">Referencias Generadas</h3>
+                            <button onclick="copyAllBatch()" class="btn btn-secondary"
+                                style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                <i class="far fa-copy"></i> Copiar Todo el Lote
+                            </button>
+                        </div>
+                        <div id="batchList" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- Las citas se insertarán aquí -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: CALCULADORA DE MUESTRA -->
+        <section id="sample-calculator" class="page-section" style="padding: 1.5rem 0;">
+            <div class="container" style="max-width: 1100px; padding: 0 1rem;">
+                <div class="section-header" style="margin-bottom: 2rem;">
+                    <span class="internal-badge" style="margin-bottom: 0.5rem; display: inline-block;">Herramienta
+                        Estadística</span>
+                    <h2 style="font-size: 2rem;">Calculadora de Tamaño de Muestra</h2>
+                </div>
+
+                <div class="calculator-card two-column-grid" style="padding: 2rem;">
+                    <!-- COLUMNA IZQUIERDA: INPUTS -->
+                    <div class="calc-inputs" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 0.5rem;"><i class="fas fa-users"></i> Población
+                                (Universo)</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-search"></i>
+                                <input type="number" id="popSize" class="form-control"
+                                    placeholder="Ej: 5000 (O vacío si es infinita)">
+                            </div>
+                        </div>
+
+                        <div class="calc-row" style="gap: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="margin-bottom: 0.5rem;"><i class="fas fa-shield-alt"></i>
+                                    Confianza</label>
+                                <select id="confidence" class="form-control"
+                                    style="padding: 0.8rem 0.8rem 0.8rem 3rem;">
+                                    <option value="1.645">90%</option>
+                                    <option value="1.96" selected>95%</option>
+                                    <option value="2.576">99%</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="margin-bottom: 0.5rem;"><i class="fas fa-bullseye"></i> Error (%)</label>
+                                <input type="number" id="errorMargin" class="form-control" value="5" step="0.1"
+                                    style="padding: 0.8rem 0.8rem 0.8rem 3rem;">
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 0.5rem;"><i class="fas fa-chart-line"></i> Probabilidad
+                                (p/q)</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-balance-scale"></i>
+                                <input type="number" id="probability" class="form-control" value="50">
+                            </div>
+                        </div>
+
+                        <button class="btn" onclick="calculateSample()"
+                            style="width: 100%; height: 3.5rem; justify-content: center; margin-top: 0.5rem; font-size: 1.1rem;">
+                            <i class="fas fa-calculator"></i> Calcular Ahora
+                        </button>
+                    </div>
+
+                    <!-- COLUMNA DERECHA: RESULTADOS -->
+                    <div class="calc-results-area" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div id="sampleResult" class="result-box" style="display: flex; opacity: 0.5;">
+                            <span
+                                style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 0.1em; display: block; margin-bottom: 0.5rem;">Total
+                                Sugerido</span>
+                            <div id="sampleCount"
+                                style="font-size: 5rem; font-weight: 900; color: var(--primary); line-height: 1;">0
+                            </div>
+                            <p style="color: var(--text-gray); font-weight: 600; font-size: 0.9rem;">Sujetos Requeridos
+                            </p>
+                            <div style="height: 1px; background: var(--border); margin: 1rem 0; width: 100%;"></div>
+                            <p id="sampleDesc"
+                                style="margin-top: 0; font-style: normal; color: var(--primary-light); font-size: 0.85rem; line-height: 1.5;">
+                                Ingresa los datos para ver el cálculo detallado.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    style="margin-top: 2rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-info-circle" style="color: var(--accent); font-size: 1.2rem;"></i>
+                    <p style="color: var(--text-gray); font-size: 0.85rem; margin: 0;"><b>Nota:</b> Utilizamos la
+                        corrección de Cochran para poblaciones finitas. El estándar recomendado es 95% de confianza y 5%
+                        de error.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 4: CHAT PDF -->
+        <section id="ai-chat" class="page-section">
+            <div class="container" style="max-width: 1200px;">
+                <div class="section-header">
+                    <h2>Neotesis IA - Chat con PDF</h2>
+                    <p>Potenciado por Llama 3.3. Análisis inteligente de documentos académicos.</p>
+                </div>
+
+                <div class="chat-layout">
+                    <div class="sidebar">
+                        <label><strong>Estado del Sistema</strong></label>
+                        <div class="internal-badge">
+                            <i class="fas fa-bolt"></i> Motor Groq Llama 3.3
+                        </div>
+
+                        <div style="border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
+
+                        <label><strong>Documento</strong></label>
+                        <input type="file" id="pdfInput" accept="application/pdf" style="display: none;"
+                            onchange="handlePdfUpload(this)">
+                        <label for="pdfInput" class="file-upload-label">
+                            <i class="fas fa-file-pdf fa-2x"></i><br>
+                            Click para subir PDF
+                        </label>
+                        <div id="pdfStatus"
+                            style="font-size: 0.8rem; color: var(--emerald); text-align: center; font-weight: 600;">
+                        </div>
+                    </div>
+
+                    <div class="chat-area">
+                        <!-- Monitoreo de Cuota -->
+                        <div class="quota-monitor" id="quotaMonitor">
+                            <div class="quota-info">
+                                <div class="status-badge active" id="statusBadge">
+                                    <span class="status-dot"></span>
+                                    <span id="serviceStatusText">Servicio Activo</span>
+                                </div>
+                                <span id="quotaText">3 / 3 consultas restantes</span>
+                            </div>
+                            <div class="quota-bar-container">
+                                <div id="quotaBar" class="quota-bar"></div>
+                            </div>
+                            <div id="quotaTimer" class="quota-timer" style="display: none;">
+                                <i class="fas fa-clock"></i> El servicio se restablecerá en: <span
+                                    id="countdown">23:59:59</span>
+                            </div>
+                        </div>
+
+                        <div id="chatMessages" class="messages">
+                            <div class="msg ai">Hola. Soy la asistente de Neotesis. Sube un PDF y estaré lista para
+                                responder tus preguntas sobre el contenido.</div>
+                        </div>
+                        <div
+                            style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border); display: flex; gap: 1rem;">
+                            <input type="text" id="userInput" class="form-control"
+                                placeholder="Escribe tu pregunta aquí..." onkeypress="handleEnter(event)">
+                            <button id="chatSendBtn" class="btn" onclick="sendMessage()" style="padding: 0 1.5rem;"><i
+                                    class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Neotesis Perú. Calidad y compromiso en tu investigación académica.</p>
+    </footer>
+
+    <script src="scripts.js" defer></script>
+</body>
+
+</html>
