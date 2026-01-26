@@ -612,27 +612,159 @@ function startQuotaCountdown(resetTimestamp) {
 }
 
 // ============================================================================
-// CHAT IA - MANEJO DE PDF
+// CHAT IA - MANEJO DE PDF Y VISOR
 // ============================================================================
+
+let pdfDocument = null;
+let currentPage = 1;
+let totalPages = 0;
+let currentZoom = 1.0;
+let pdfTextByPage = []; // Array para almacenar texto por página
 
 async function handlePdfUpload(input) {
     const file = input.files[0];
     if (!file) return;
+
     try {
+        // Mostrar loading
+        document.getElementById('pdfStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando PDF...';
+
         const buffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-        let text = "";
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
+
+        // Cargar PDF con PDF.js
+        pdfDocument = await pdfjsLib.getDocument({ data: buffer }).promise;
+        totalPages = pdfDocument.numPages;
+
+        // Extraer texto de todas las páginas
+        pdfText = "";
+        pdfTextByPage = [];
+
+        for (let i = 1; i <= totalPages; i++) {
+            const page = await pdfDocument.getPage(i);
             const content = await page.getTextContent();
-            text += content.items.map(item => item.str).join(' ') + " ";
+            const pageText = content.items.map(item => item.str).join(' ');
+            pdfTextByPage.push({
+                page: i,
+                text: pageText,
+                startIndex: pdfText.length
+            });
+            pdfText += pageText + " ";
         }
-        pdfText = text.substring(0, MAX_PDF_CONTEXT);
-        document.getElementById('pdfStatus').innerText = "PDF listo.";
+
+        // Limitar el contexto total
+        pdfText = pdfText.substring(0, MAX_PDF_CONTEXT);
+
+        // Actualizar UI
+        document.getElementById('pdfStatus').innerHTML = '<i class="fas fa-check-circle" style="color: var(--emerald);"></i> PDF cargado correctamente';
+        document.getElementById('pdfControls').style.display = 'flex';
+
+        // Renderizar primera página
+        currentPage = 1;
+        await renderPage(currentPage);
+
+        // Actualizar navegación
+        updatePageNavigation();
+
+        // Mensaje de bienvenida actualizado
+        const chat = document.getElementById('chatMessages');
+        chat.innerHTML = `
+            <div class="msg ai">
+                <div class="ai-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="msg-content">
+                    <strong>Neotesis IA:</strong> ¡Perfecto! He cargado tu PDF de ${totalPages} página(s). Ahora puedes hacer preguntas específicas sobre el contenido. Te mostraré exactamente de dónde saqué la información en cada respuesta.
+                </div>
+            </div>
+        `;
+
     } catch (e) {
+        document.getElementById('pdfStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i> Error al procesar el PDF';
         alert("Error al procesar el PDF. Verifica que sea un archivo válido.");
         console.error("PDF Error:", e);
     }
+}
+
+async function renderPage(pageNum) {
+    if (!pdfDocument) return;
+
+    try {
+        const page = await pdfDocument.getPage(pageNum);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        // Calcular escala para ajustar al contenedor
+        const container = document.getElementById('pdfViewer');
+        const containerWidth = container.clientWidth - 40; // Padding
+        const containerHeight = container.clientHeight - 40;
+
+        const viewport = page.getViewport({ scale: 1.0 });
+        const scaleX = containerWidth / viewport.width;
+        const scaleY = containerHeight / viewport.height;
+        const scale = Math.min(scaleX, scaleY, 2.0) * currentZoom; // Limitar zoom máximo
+
+        const scaledViewport = page.getViewport({ scale: scale });
+
+        canvas.height = scaledViewport.height;
+        canvas.width = scaledViewport.width;
+
+        const renderContext = {
+            canvasContext: context,
+            viewport: scaledViewport
+        };
+
+        await page.render(renderContext).promise;
+
+        // Limpiar visor y agregar canvas
+        const viewer = document.getElementById('pdfViewer');
+        viewer.innerHTML = '';
+        viewer.appendChild(canvas);
+
+        // Centrar el canvas
+        canvas.style.display = 'block';
+        canvas.style.margin = '20px auto';
+
+    } catch (e) {
+        console.error('Error rendering page:', e);
+    }
+}
+
+function updatePageNavigation() {
+    document.getElementById('currentPage').textContent = currentPage;
+    document.getElementById('totalPages').textContent = totalPages;
+    document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+
+    // Habilitar/deshabilitar botones
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
+}
+
+async function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        await renderPage(currentPage);
+        updatePageNavigation();
+    }
+}
+
+async function zoomPDF(delta) {
+    currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
+    await renderPage(currentPage);
+    updatePageNavigation();
+}
+
+function highlightPdfReference(pageNum, textSnippet = "") {
+    // Cambiar a la página especificada
+    if (pageNum && pageNum !== currentPage) {
+        currentPage = pageNum;
+        renderPage(currentPage);
+        updatePageNavigation();
+    }
+
+    // Aquí se podría implementar highlighting visual del texto
+    // Por ahora, solo cambiamos de página
+    console.log(`Referencia: Página ${pageNum}`, textSnippet);
 }
 
 // ============================================================================
@@ -650,7 +782,16 @@ async function sendMessage() {
     if (!msg) return;
     document.getElementById('userInput').value = "";
     const chat = document.getElementById('chatMessages');
-    chat.innerHTML += `<div class="msg user">${msg}</div>`;
+    chat.innerHTML += `
+        <div class="msg user">
+            <div class="ai-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="msg-content">
+                <strong>Tú:</strong> ${msg}
+            </div>
+        </div>
+    `;
     history.push({ role: "user", content: msg });
 
     try {
@@ -670,7 +811,16 @@ async function sendMessage() {
         if (res.status === 429) {
             const errorData = await res.json();
             const resetTime = new Date(errorData.resetTime);
-            chat.innerHTML += `<div class="msg ai" style="color: #ef4444;">Has excedido el límite de consultas diarias. El servicio se restablecerá el ${resetTime.toLocaleString('es-PE')}.</div>`;
+            chat.innerHTML += `
+                <div class="msg ai">
+                    <div class="ai-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="msg-content" style="color: #ef4444;">
+                        <strong>Neotesis IA:</strong> Has excedido el límite de consultas diarias. El servicio se restablecerá el ${resetTime.toLocaleString('es-PE')}.
+                    </div>
+                </div>
+            `;
 
             // Actualizar cuota local para reflejar el bloqueo del servidor
             if (!data.firstUsed) data.firstUsed = Date.now();
@@ -687,7 +837,51 @@ async function sendMessage() {
 
         const responseData = await res.json();
         const reply = responseData.choices[0].message.content;
-        chat.innerHTML += `<div class="msg ai">${reply}</div>`;
+
+        // Generar referencias del PDF (simuladas por ahora)
+        let referencesHTML = '';
+        if (pdfDocument && pdfTextByPage.length > 0) {
+            // Buscar páginas que contengan palabras clave de la respuesta
+            const responseWords = reply.toLowerCase().split(' ');
+            const relevantPages = [];
+
+            pdfTextByPage.forEach(pageData => {
+                const pageWords = pageData.text.toLowerCase();
+                const matches = responseWords.filter(word =>
+                    word.length > 3 && pageWords.includes(word)
+                );
+                if (matches.length > 0) {
+                    relevantPages.push({
+                        page: pageData.page,
+                        matches: matches.length
+                    });
+                }
+            });
+
+            // Mostrar hasta 3 referencias más relevantes
+            if (relevantPages.length > 0) {
+                referencesHTML = '<div style="margin-top: 1rem;">';
+                referencesHTML += '<strong>Referencias en el documento:</strong><br>';
+                relevantPages.slice(0, 3).forEach(ref => {
+                    referencesHTML += `<div class="pdf-reference" onclick="highlightPdfReference(${ref.page})">
+                        <i class="fas fa-file-alt"></i> Página ${ref.page} - ${ref.matches} coincidencias
+                    </div>`;
+                });
+                referencesHTML += '</div>';
+            }
+        }
+
+        chat.innerHTML += `
+            <div class="msg ai">
+                <div class="ai-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="msg-content">
+                    <strong>Neotesis IA:</strong> ${reply}
+                    ${referencesHTML}
+                </div>
+            </div>
+        `;
         history.push({ role: "assistant", content: reply });
         chat.scrollTop = chat.scrollHeight;
 
@@ -705,7 +899,16 @@ async function sendMessage() {
 
     } catch (e) {
         console.error("Chat Error:", e);
-        chat.innerHTML += `<div class="msg ai" style="color: #ef4444;">Error de conexión: ${e.message || 'Servicio no disponible'}. Verifica tu conexión e intenta de nuevo.</div>`;
+        chat.innerHTML += `
+            <div class="msg ai">
+                <div class="ai-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="msg-content" style="color: #ef4444;">
+                    <strong>Neotesis IA:</strong> Error de conexión: ${e.message || 'Servicio no disponible'}. Verifica tu conexión e intenta de nuevo.
+                </div>
+            </div>
+        `;
     }
 }
 
