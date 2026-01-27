@@ -1715,6 +1715,31 @@ function getAuthHeaders() {
     return headers;
 }
 
+/**
+ * Crear nuevo chat en el servidor
+ */
+async function createChat(title) {
+    if (!isLoggedIn || !authToken) return null;
+    
+    try {
+        const response = await fetch('/api/chats', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ title })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error creando chat');
+        }
+        
+        const chat = await response.json();
+        return chat.id;
+    } catch (error) {
+        console.error('Error creating chat:', error);
+        return null;
+    }
+}
+
 // ============================================================================
 // GESTIÓN DE CHATS
 // ============================================================================
