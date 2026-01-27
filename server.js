@@ -33,6 +33,9 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = SECURITY_CONFIG.PORT;
 
+// Trust proxy for Railway (handles X-Forwarded-For header)
+app.set('trust proxy', 1);
+
 // ============================================================================
 // CONFIGURACIÓN DE SEGURIDAD - MIDDLEWARE
 // ============================================================================
