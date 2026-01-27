@@ -108,6 +108,21 @@ nav a.active {
     color: var(--accent);
 }
 
+.hamburger {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-dark);
+    cursor: pointer;
+    padding: 0.5rem;
+    margin-left: auto;
+}
+
+nav {
+    position: relative;
+}
+
 /* --- Layout General --- */
 main {
     flex: 1;
@@ -977,8 +992,42 @@ footer p {
         padding: 1rem;
     }
 
+    .hamburger {
+        display: block;
+    }
+
     nav ul {
         display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        flex-direction: column;
+        gap: 0;
+        padding: 1rem 0;
+        z-index: 1000;
+    }
+
+    nav.mobile-open ul {
+        display: flex;
+    }
+
+    nav ul li {
+        width: 100%;
+    }
+
+    nav ul li a {
+        display: block;
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    nav ul li:last-child a {
+        border-bottom: none;
     }
 
     .hero-content h1 {

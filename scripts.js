@@ -246,7 +246,18 @@ function showSection(sectionId) {
         }
     });
 
+    // Close mobile menu after navigation
+    const nav = document.querySelector('nav');
+    if (nav.classList.contains('mobile-open')) {
+        nav.classList.remove('mobile-open');
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleMobileMenu() {
+    const nav = document.querySelector('nav');
+    nav.classList.toggle('mobile-open');
 }
 
 function openWhatsApp() {
