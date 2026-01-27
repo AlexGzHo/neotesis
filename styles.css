@@ -710,6 +710,29 @@ main {
     height: 100%;
 }
 
+/* --- PDF Viewer Panel --- */
+.pdf-viewer-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    min-width: 0;
+    height: 100%;
+}
+
+.pdf-viewer-panel .pdf-viewer-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.pdf-viewer-panel .pdf-viewer {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+}
+
 .pdf-header {
     padding: 1.5rem;
     background: #f8fafc;
