@@ -64,7 +64,8 @@ const cspConfig = {
       "https://wiley.com",
       "https://elsevier.com",
       "https://scielo.org",
-      "https://redalyc.org"
+      "https://redalyc.org",
+      "https://cdnjs.cloudflare.com" // Para DOMPurify y otras librerías
     ],
     frameSrc: ["'none'"], // Previene clickjacking
     objectSrc: ["'none'"], // Previene plugins inseguros

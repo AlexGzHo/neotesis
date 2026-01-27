@@ -575,12 +575,16 @@
             <!-- FORMULARIO REGISTRO -->
             <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
                 <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="registerName" class="form-control" placeholder="Tu nombre" required minlength="2" maxlength="100">
+                </div>
+                <div class="form-group">
                     <label>Email</label>
                     <input type="email" id="registerEmail" class="form-control" placeholder="tu@email.com" required>
                 </div>
                 <div class="form-group">
                     <label>Contraseña</label>
-                    <input type="password" id="registerPassword" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    <input type="password" id="registerPassword" class="form-control" placeholder="Mínimo 8 caracteres" required minlength="8">
                 </div>
                 <div class="form-group">
                     <label>Confirmar Contraseña</label>

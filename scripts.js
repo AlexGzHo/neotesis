@@ -1622,12 +1622,18 @@ async function handleLogin(event) {
 async function handleRegister(event) {
     event.preventDefault();
     
+    const name = document.getElementById('registerName').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
     
-    if (!email || !password || !passwordConfirm) {
+    if (!name || !email || !password || !passwordConfirm) {
         showAuthMessage('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    if (name.length < 2 || name.length > 100) {
+        showAuthMessage('El nombre debe tener entre 2 y 100 caracteres', 'error');
         return;
     }
     
@@ -1636,8 +1642,8 @@ async function handleRegister(event) {
         return;
     }
     
-    if (password.length < 6) {
-        showAuthMessage('La contraseña debe tener al menos 6 caracteres', 'error');
+    if (password.length < 8) {
+        showAuthMessage('La contraseña debe tener al menos 8 caracteres', 'error');
         return;
     }
     
@@ -1647,7 +1653,7 @@ async function handleRegister(event) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, name })
         });
         
         const data = await response.json();
