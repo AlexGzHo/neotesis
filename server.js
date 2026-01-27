@@ -154,8 +154,14 @@ app.post('/api/chat', async (req, res) => {
       req.ip ||
       'unknown';
 
+    let rateLimitStatus = {
+      allowed: true,
+      remaining: MAX_REQUESTS_PER_IP,
+      resetTime: Date.now() + RATE_LIMIT_WINDOW
+    };
+
     if (process.env.DISABLE_RATE_LIMIT !== 'true') {
-      const rateLimitStatus = checkRateLimit(clientIP);
+      rateLimitStatus = checkRateLimit(clientIP);
 
       if (!rateLimitStatus.allowed) {
       const resetDate = new Date(rateLimitStatus.resetTime);
