@@ -128,6 +128,23 @@ function cleanupOldEntries() {
 }
 
 /**
+ * Genera un título para el chat basado en el primer mensaje
+ */
+function generateChatTitle(firstMessage) {
+  if (!firstMessage || typeof firstMessage !== 'string') {
+    return 'Nuevo Chat';
+  }
+  
+  // Tomar las primeras 50 caracteres y limpiar
+  const title = firstMessage
+    .substring(0, 50)
+    .trim()
+    .replace(/\s+/g, ' ');
+  
+  return title.length < firstMessage.length ? title + '...' : title;
+}
+
+/**
  * Verifica si una IP ha excedido el rate limit
  */
 function checkRateLimit(ip) {
@@ -183,9 +200,9 @@ function checkRateLimit(ip) {
 // API ROUTES CON SEGURIDAD
 // ============================================================================
 
-// Chat API route con validación, rate limiting estricto Y autenticación REQUERIDA
+// Chat API route con validación, rate limiting estricto Y autenticación OPCIONAL
 app.post('/api/chat',
-  requireAuth, // NEW: requiere autenticación
+  optionalAuth, // Opcional: permite usuarios anónimos
   strictLimiter, // Rate limiting estricto para chat
   chatValidationRules, // Validación de inputs
   handleValidationErrors, // Manejo de errores de validación
@@ -196,11 +213,17 @@ app.post('/api/chat',
       req.ip ||
       'unknown';
 
+    // ✅ AGREGAR: Verificar si hay usuario autenticado
+    const isAuthenticated = req.user && req.user.id;
+    const chatId = req.body.chatId;
+
     try {
       securityLogger.info('Chat request started', {
         ip: clientIP,
         userAgent: req.headers['user-agent'],
-        messageCount: req.body.messages?.length
+        messageCount: req.body.messages?.length,
+        authenticated: !!isAuthenticated,
+        chatId: chatId || 'new'
       });
 
       const body = req.body;
@@ -337,11 +360,94 @@ ${body.pdfContext}`
         });
       }
 
+      // ✅ AGREGAR: Guardado condicional a base de datos
+      let savedChatId = null;
+      
+      if (isAuthenticated) {
+        try {
+          let chat;
+          
+          if (chatId) {
+            // Chat existente - verificar que pertenece al usuario
+            chat = await Chat.findOne({
+              where: { 
+                id: chatId,
+                user_id: req.user.id 
+              }
+            });
+            
+            if (!chat) {
+              securityLogger.warn('Chat not found or unauthorized', {
+                chatId,
+                userId: req.user.id,
+                ip: clientIP
+              });
+            }
+          } else {
+            // Crear nuevo chat
+            chat = await Chat.create({
+              user_id: req.user.id,
+              title: generateChatTitle(body.messages?.[0]?.content),
+              created_at: new Date(),
+              updated_at: new Date()
+            });
+            
+            securityLogger.info('New chat created', {
+              chatId: chat.id,
+              userId: req.user.id
+            });
+          }
+
+          // Guardar mensajes si hay un chat válido
+          if (chat) {
+            // Guardar mensaje del usuario
+            await Message.create({
+              chat_id: chat.id,
+              role: 'user',
+              content: body.messages[body.messages.length - 1]?.content,
+              created_at: new Date()
+            });
+
+            // Guardar respuesta de la IA
+            await Message.create({
+              chat_id: chat.id,
+              role: 'assistant',
+              content: groqData.choices[0].message.content,
+              tokens_used: groqData.usage?.total_tokens || 0,
+              created_at: new Date()
+            });
+
+            // Actualizar timestamp del chat
+            await chat.update({ updated_at: new Date() });
+            
+            savedChatId = chat.id;
+            securityLogger.info('Messages saved', {
+              chatId: chat.id,
+              messageCount: 2
+            });
+          }
+        } catch (dbError) {
+          // NO fallar la respuesta si hay error de DB
+          securityLogger.error('Error saving chat to database', dbError, {
+            userId: req.user.id,
+            chatId: chatId,
+            ip: clientIP
+          });
+          // Continuar y devolver la respuesta de la IA
+        }
+      } else {
+        // Usuario anónimo - no guardar
+        securityLogger.info('Anonymous chat - not saving to database', {
+          ip: clientIP
+        });
+      }
+
       // Log de éxito y métricas
       const duration = Date.now() - startTime;
       securityLogger.successfulRequest('/api/chat', duration, {
         ip: clientIP,
-        tokensUsed: groqData.usage?.total_tokens || 0
+        tokensUsed: groqData.usage?.total_tokens || 0,
+        saved: !!isAuthenticated
       });
 
       // Headers de rate limiting (legacy para compatibilidad)
@@ -351,7 +457,12 @@ ${body.pdfContext}`
         'X-RateLimit-Reset': (Date.now() + RATE_LIMIT_WINDOW).toString()
       });
 
-      res.json(groqData);
+      // ✅ MODIFICAR: Responder incluyendo chatId y saved
+      res.json({
+        ...groqData,
+        chatId: savedChatId,
+        saved: !!isAuthenticated
+      });
 
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -601,76 +712,141 @@ app.use('/api/auth', authRoutes);
 
 app.get('/api/chats', authMiddleware, async (req, res) => {
   try {
+    // ✅ Verificar autenticación
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'No autenticado',
+        message: 'Debes iniciar sesión para ver tus chats guardados'
+      });
+    }
+    
     const chats = await Chat.findAll({
-      where: { user_id: req.user.id },
-      order: [['updatedAt', 'DESC']],
-      attributes: ['id', 'title', 'updatedAt']
+      where: { user_id: req.user.id || req.user.userId },
+      order: [['updated_at', 'DESC']],
+      limit: 50,
+      attributes: ['id', 'title', 'updated_at']
     });
-    res.json(chats);
+    res.json({ chats });
   } catch (error) {
-    console.error('Error getting chats:', error);
-    res.status(500).json({ error: 'Error al obtener chats: ' + error.message });
+    securityLogger.error('Error getting chats', error, {
+      userId: req.user?.id || req.user?.userId,
+      ip: req.ip
+    });
+    res.status(500).json({ error: 'Error al obtener chats', message: error.message });
   }
 });
 
 app.post('/api/chats', authMiddleware, async (req, res) => {
   try {
+    // ✅ Verificar autenticación
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'No autenticado',
+        message: 'Debes iniciar sesión para guardar chats'
+      });
+    }
+    
     const { title, initialMessage } = req.body;
     const chat = await Chat.create({
-      user_id: req.user.id,
-      title: title || 'Nuevo Chat'
+      user_id: req.user.id || req.user.userId,
+      title: title || 'Nuevo Chat',
+      created_at: new Date(),
+      updated_at: new Date()
     });
 
     if (initialMessage) {
       await Message.create({
         chat_id: chat.id,
         role: 'user',
-        content: initialMessage
+        content: initialMessage,
+        created_at: new Date()
       });
     }
 
-    res.status(201).json(chat);
+    securityLogger.info('Chat created via API', {
+      chatId: chat.id,
+      userId: req.user.id || req.user.userId
+    });
+
+    res.status(201).json({ chat });
   } catch (error) {
-    console.error('Error creating chat:', error);
-    res.status(500).json({ error: 'Error al crear chat: ' + error.message });
+    securityLogger.error('Error creating chat', error, {
+      userId: req.user?.id || req.user?.userId,
+      ip: req.ip,
+      body: req.body
+    });
+    res.status(500).json({ error: 'Error al crear chat', message: error.message });
   }
 });
 
 app.get('/api/chats/:id', authMiddleware, async (req, res) => {
   try {
+    // ✅ Verificar autenticación
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'No autenticado',
+        message: 'Debes iniciar sesión para ver este chat'
+      });
+    }
+    
     const chat = await Chat.findOne({
-      where: { id: req.params.id, user_id: req.user.id },
-      include: [{ model: Message, order: [['createdAt', 'ASC']] }]
+      where: { id: req.params.id, user_id: req.user.id || req.user.userId },
+      include: [{ model: Message, order: [['created_at', 'ASC']] }]
     });
 
     if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
 
-    res.json(chat);
+    res.json({ chat });
   } catch (error) {
+    securityLogger.error('Error getting chat', error, {
+      chatId: req.params.id,
+      userId: req.user?.id || req.user?.userId,
+      ip: req.ip
+    });
     res.status(500).json({ error: 'Error al obtener chat' });
   }
 });
 
 app.post('/api/chats/:id/messages', authMiddleware, async (req, res) => {
   try {
+    // ✅ Verificar autenticación
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'No autenticado',
+        message: 'Debes iniciar sesión para enviar mensajes'
+      });
+    }
+    
     const { role, content } = req.body;
-    const chat = await Chat.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    const chat = await Chat.findOne({ 
+      where: { id: req.params.id, user_id: req.user.id || req.user.userId } 
+    });
 
     if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
 
     const message = await Message.create({
       chat_id: chat.id,
       role,
-      content
+      content,
+      created_at: new Date()
     });
 
     // Update chat timestamp
-    chat.changed('updatedAt', true);
-    await chat.save();
+    await chat.update({ updated_at: new Date() });
 
-    res.status(201).json(message);
+    securityLogger.info('Message saved to existing chat', {
+      chatId: chat.id,
+      messageId: message.id,
+      userId: req.user.id || req.user.userId
+    });
+
+    res.status(201).json({ message });
   } catch (error) {
-    console.error('Error saving message:', error);
+    securityLogger.error('Error saving message', error, {
+      chatId: req.params.id,
+      userId: req.user?.id || req.user?.userId,
+      ip: req.ip
+    });
     res.status(500).json({ error: 'Error al guardar mensaje: ' + error.message });
   }
 });
@@ -678,7 +854,17 @@ app.post('/api/chats/:id/messages', authMiddleware, async (req, res) => {
 // DELETE chat by ID
 app.delete('/api/chats/:id', authMiddleware, async (req, res) => {
   try {
-    const chat = await Chat.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    // ✅ Verificar autenticación
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'No autenticado',
+        message: 'Debes iniciar sesión para eliminar chats'
+      });
+    }
+    
+    const chat = await Chat.findOne({ 
+      where: { id: req.params.id, user_id: req.user.id || req.user.userId } 
+    });
 
     if (!chat) {
       return res.status(404).json({ error: 'Chat no encontrado' });
@@ -690,9 +876,18 @@ app.delete('/api/chats/:id', authMiddleware, async (req, res) => {
     // Delete the chat
     await chat.destroy();
 
+    securityLogger.info('Chat deleted', {
+      chatId: req.params.id,
+      userId: req.user.id || req.user.userId
+    });
+
     res.status(200).json({ message: 'Chat eliminado correctamente' });
   } catch (error) {
-    console.error('Error deleting chat:', error);
+    securityLogger.error('Error deleting chat', error, {
+      chatId: req.params.id,
+      userId: req.user?.id || req.user?.userId,
+      ip: req.ip
+    });
     res.status(500).json({ error: 'Error al eliminar chat' });
   }
 });

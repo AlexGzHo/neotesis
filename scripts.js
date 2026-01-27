@@ -1132,11 +1132,8 @@ let pendingUserMessages = [];
 let hasAIResponded = false;
 
 async function sendMessage() {
-  // Verificar autenticación
-  if (!isLoggedIn) {
-    showAuthNotification();
-    return;
-  }
+  // Permitir usuarios anónimos - sin verificar autenticación
+  // El servidor guardará el chat solo si el usuario está autenticado
 
   const data = getQuotaData();
   if (!DISABLE_QUOTA && (data.count >= MAX_QUOTA || data.tokens >= MAX_TOKENS)) {
@@ -1271,6 +1268,11 @@ async function sendMessage() {
             referencesHTML += '</div>';
         }
 
+        // ✅ Mostrar indicador de si el chat fue guardado o no
+        const savedIndicator = responseData.saved 
+            ? '<small style="color: var(--emerald, #10b981); font-size: 0.75rem; margin-left: 0.5rem;"><i class="fas fa-check"></i> Guardado</small>' 
+            : '<small style="color: var(--text-gray, #6b7280); font-size: 0.75rem; margin-left: 0.5rem;"><i class="fas fa-info-circle"></i> No guardado</small>';
+
         chat.innerHTML += `
             <div class="msg ai">
                 <div class="ai-avatar">
@@ -1279,6 +1281,7 @@ async function sendMessage() {
                 <div class="msg-content">
                     <strong>Neotesis IA:</strong> ${reply}
                     ${referencesHTML}
+                    ${savedIndicator}
                 </div>
             </div>
         `;
@@ -1290,38 +1293,17 @@ async function sendMessage() {
         history.push({ role: "assistant", content: rawReply });
         chat.scrollTop = chat.scrollHeight;
 
-        // SOLO GUARDAR DESPUÉS DE RESPUESTA EXITOSA DE LA AI
-        // Crear chat y guardar todos los mensajes (pendientes + AI) si es la primera respuesta
-        if (!hasAIResponded) {
-            try {
-                // Generar título desde el primer mensaje del usuario
-                const title = generateChatTitle(pendingUserMessages);
-                
-                // Crear nuevo chat en la base de datos
-                currentChatId = await createChat(title);
-                
-                // Guardar todos los mensajes pendientes del usuario
-                for (const msg of pendingUserMessages) {
-                    await saveChatMessage(currentChatId, msg.role, msg.content);
-                }
-                
-                // Guardar respuesta del assistant
-                await saveChatMessage(currentChatId, 'assistant', rawReply);
-                
-                // Limpiar pendientes y marcar que ya hay respuesta
-                pendingUserMessages = [];
-                hasAIResponded = true;
-                
-                // Recargar lista de chats para mostrar el nuevo
+        // ✅ El servidor ahora maneja el guardado condicional
+        // Solo actualizar currentChatId si el servidor devolvió un chatId
+        if (responseData.chatId && !hasAIResponded) {
+            currentChatId = responseData.chatId;
+            pendingUserMessages = [];
+            hasAIResponded = true;
+            
+            // Recargar lista de chats para mostrar el nuevo
+            if (isLoggedIn) {
                 await loadChatList();
-                
-            } catch (saveError) {
-                console.error('Error guardando chat:', saveError);
-                // Los mensajes se mantienen en memoria para reintentar
             }
-        } else if (currentChatId) {
-            // Chat ya existe, guardar solo el mensaje del assistant
-            await saveChatMessage(currentChatId, 'assistant', rawReply);
         }
 
         // Actualizar cuota tras éxito
@@ -1590,8 +1572,11 @@ async function handleLogin(event) {
         currentUser = data.user;
         isLoggedIn = true;
         
+        console.log('[Auth] Token recibido:', authToken ? authToken.substring(0, 20) + '...' : 'NULL');
         localStorage.setItem('neotesis_token', authToken);
         localStorage.setItem('neotesis_user', JSON.stringify(currentUser));
+        
+        console.log('[Auth] Token guardado en localStorage:', localStorage.getItem('neotesis_token') ? 'SÍ' : 'NO');
         
         showAuthMessage('¡Inicio de sesión exitoso!', 'success');
         
@@ -1844,37 +1829,70 @@ async function saveChatMessage(chatId, role, content) {
  * Cargar lista de chats
  */
 async function loadChatList() {
-    if (!isLoggedIn || !authToken) return;
+    // Verificar autenticación - intentar obtener token de localStorage si no está en memoria
+    const token = authToken || localStorage.getItem('neotesis_token');
+    
+    console.log('[Chat] loadChatList - token existe:', !!token);
+    
+    if (!token) {
+        console.log('[Chat] No hay token, no se pueden cargar chats');
+        return;
+    }
     
     const chatListPanel = document.getElementById('chatListPanel');
     const chatList = document.getElementById('chatList');
     const chatEmptyState = document.getElementById('chatEmptyState');
     
-    if (!chatListPanel || !chatList) return;
+    if (!chatListPanel || !chatList) {
+        console.log('[Chat] Elementos del DOM no encontrados');
+        return;
+    }
+    
+    console.log('[Chat] Obteniendo chats desde /api/chats...');
     
     try {
         const response = await fetch('/api/chats', {
             method: 'GET',
-            headers: getAuthHeaders()
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Authorization': `Bearer ${token}`
+            }
         });
         
-        if (!response.ok) {
-            throw new Error('Error cargando chats');
+        console.log('[Chat] Response status:', response.status);
+        
+        if (response.status === 401) {
+            // Token inválido - limpiar estado
+            console.log('[Chat] Token inválido, limpiando sesión');
+            if (isLoggedIn) {
+                handleLogout();
+            }
+            return;
         }
         
-        const chats = await response.json();
+        if (!response.ok) {
+            throw new Error('Error cargando chats: ' + response.status);
+        }
+        
+        const data = await response.json();
+        const chats = data.chats || [];
+        
+        console.log('[Chat] Chats obtenidos:', chats.length);
         
         if (chats.length === 0) {
+            console.log('[Chat] No hay chats, mostrando estado vacío');
             chatListPanel.style.display = 'none';
             if (chatEmptyState) chatEmptyState.style.display = 'flex';
             return;
         }
         
+        console.log('[Chat] Mostrando', chats.length, 'chats en el sidebar');
         chatListPanel.style.display = 'block';
         if (chatEmptyState) chatEmptyState.style.display = 'none';
         
         chatList.innerHTML = chats.map(chat => {
-            const date = new Date(chat.updatedAt).toLocaleDateString('es-PE');
+            const date = new Date(chat.updated_at || chat.created_at).toLocaleDateString('es-PE');
             return `
                 <div class="chat-item ${currentChatId === chat.id ? 'active' : ''}" 
                      onclick="loadChat('${chat.id}')">
@@ -1893,7 +1911,7 @@ async function loadChatList() {
         }).join('');
         
     } catch (error) {
-        console.error('Error loading chats:', error);
+        console.error('[Chat] Error loading chats:', error);
     }
 }
 
@@ -1905,11 +1923,26 @@ async function deleteChat(chatId) {
         return;
     }
     
+    const token = authToken || localStorage.getItem('neotesis_token');
+    if (!token) return;
+    
     try {
         const response = await fetch(`/api/chats/${chatId}`, {
             method: 'DELETE',
-            headers: getAuthHeaders()
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Authorization': `Bearer ${token}`
+            }
         });
+        
+        if (response.status === 401) {
+            console.log('[Chat] Token inválido al eliminar chat');
+            if (isLoggedIn) {
+                handleLogout();
+            }
+            return;
+        }
         
         if (!response.ok) {
             throw new Error('Error al eliminar chat');
@@ -1951,25 +1984,39 @@ async function deleteChat(chatId) {
  * Cargar un chat específico
  */
 async function loadChat(chatId) {
-    if (!isLoggedIn || !authToken) return;
+    const token = authToken || localStorage.getItem('neotesis_token');
+    if (!token) return;
     
     currentChatId = chatId;
     
     // Resetear estado de pendientes
     pendingUserMessages = [];
-    hasAIResponded = true; // Ya hay un chat cargado, quindi ya tiene respuestas
+    hasAIResponded = true; // Ya hay un chat cargado
     
     try {
         const response = await fetch(`/api/chats/${chatId}`, {
             method: 'GET',
-            headers: getAuthHeaders()
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Authorization': `Bearer ${token}`
+            }
         });
+        
+        if (response.status === 401) {
+            console.log('[Chat] Token inválido al cargar chat');
+            if (isLoggedIn) {
+                handleLogout();
+            }
+            return;
+        }
         
         if (!response.ok) {
             throw new Error('Error cargando chat');
         }
         
-        const chat = await response.json();
+        const data = await response.json();
+        const chat = data.chat || data;
         const messages = chat.Messages || [];
         
         // Limpiar messages locales
@@ -1977,6 +2024,8 @@ async function loadChat(chatId) {
         
         // Cargar messages en UI
         const chatMessages = document.getElementById('chatMessages');
+        if (!chatMessages) return;
+        
         chatMessages.innerHTML = '';
         
         messages.forEach(msg => {
@@ -1992,7 +2041,7 @@ async function loadChat(chatId) {
                 </div>
             `;
             
-            // Agregar al history (solo content, no incluir el del assistant para no duplicar)
+            // Agregar al history (solo mensajes de usuario)
             if (msg.role === 'user') {
                 history.push({ role: 'user', content: msg.content });
             }
@@ -2016,10 +2065,14 @@ function updateChatAuthUI() {
     const chatEmptyState = document.getElementById('chatEmptyState');
     const authNotification = document.getElementById('authNotification');
     
+    console.log('[Chat] updateChatAuthUI - isLoggedIn:', isLoggedIn, 'currentUser:', currentUser ? currentUser.id : null);
+    
     if (isLoggedIn && currentUser) {
+        console.log('[Chat] Usuario logueado, cargando chats...');
         hideAuthNotification();
         loadChatList();
     } else {
+        console.log('[Chat] Usuario NO logueado, mostrando estado vacío');
         if (chatListPanel) {
             chatListPanel.style.display = 'none';
         }
