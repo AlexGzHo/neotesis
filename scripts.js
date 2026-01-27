@@ -260,6 +260,22 @@ function toggleMobileMenu() {
     nav.classList.toggle('mobile-open');
 }
 
+// Event listeners
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+if (hamburgerBtn) {
+    hamburgerBtn.addEventListener('click', toggleMobileMenu);
+}
+
+// Nav links
+const navLinks = document.querySelectorAll('nav a[data-section]');
+navLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const section = this.getAttribute('data-section');
+        showSection(section);
+    });
+});
+
 function openWhatsApp() {
     window.open("https://wa.me/51900000000?text=Hola,%20necesito%20asesoría%20con%20mi%20tesis", "_blank");
 }

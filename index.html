@@ -26,15 +26,15 @@
             <div class="logo" onclick="showSection('landing'); return false;" style="cursor: pointer;">
                 <i class="fas fa-graduation-cap"></i> Neotesis <span>Perú</span>
             </div>
-            <button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menú">
-                <i class="fas fa-bars"></i>
-            </button>
             <nav>
+                <button class="hamburger" id="hamburgerBtn" aria-label="Menú">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <ul>
-                    <li><a href="#" onclick="showSection('landing'); return false;" class="active">Inicio</a></li>
-                    <li><a href="#" onclick="showSection('citation-tools'); return false;">Herramientas de Cita</a></li>
-                    <li><a href="#" onclick="showSection('sample-calculator'); return false;">Muestra</a></li>
-                    <li><a href="#" onclick="showSection('ai-chat'); return false;">Chat con PDF</a></li>
+                    <li><a href="#" data-section="landing" class="active">Inicio</a></li>
+                    <li><a href="#" data-section="citation-tools">Herramientas de Cita</a></li>
+                    <li><a href="#" data-section="sample-calculator">Muestra</a></li>
+                    <li><a href="#" data-section="ai-chat">Chat con PDF</a></li>
                 </ul>
             </nav>
         </div>

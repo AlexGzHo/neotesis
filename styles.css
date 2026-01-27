@@ -50,6 +50,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 
 .logo {
@@ -110,17 +111,30 @@ nav a.active {
 
 .hamburger {
     display: none;
-    background: none;
+    background: var(--accent);
     border: none;
+    border-radius: 6px;
     font-size: 1.5rem;
-    color: var(--text-dark);
+    color: var(--white);
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
     margin-left: auto;
+    order: 1;
+}
+
+.hamburger:hover {
+    background: var(--accent-hover);
 }
 
 nav {
     position: relative;
+    display: flex;
+    align-items: center;
+}
+
+nav.mobile-open ul {
+    display: flex;
 }
 
 /* --- Layout General --- */
@@ -583,7 +597,8 @@ main {
     border-top: 1px solid var(--border);
 }
 
-.nav-btn, .zoom-btn {
+.nav-btn,
+.zoom-btn {
     padding: 0.5rem;
     border: none;
     background: var(--accent);
@@ -598,7 +613,8 @@ main {
     justify-content: center;
 }
 
-.nav-btn:hover, .zoom-btn:hover {
+.nav-btn:hover,
+.zoom-btn:hover {
     background: var(--accent-hover);
     transform: scale(1.05);
 }
@@ -635,7 +651,8 @@ main {
     flex-direction: column;
     background: var(--white);
     height: 100%;
-    min-height: 0; /* permite que .messages haga scroll dentro del panel */
+    min-height: 0;
+    /* permite que .messages haga scroll dentro del panel */
 }
 
 /* --- Quota Monitor Styles --- */
@@ -996,24 +1013,27 @@ footer p {
         display: block;
     }
 
+    nav {
+        position: static;
+    }
+
     nav ul {
         display: none;
         position: absolute;
         top: 100%;
         left: 0;
         right: 0;
-        background: var(--white);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        background: var(--primary);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         flex-direction: column;
         gap: 0;
-        padding: 1rem 0;
+        padding: 0;
         z-index: 1000;
-    }
-
-    nav.mobile-open ul {
-        display: flex;
+        width: 100%;
+        max-width: none;
+        order: 2;
+        animation: slideDown 0.3s ease-out forwards;
     }
 
     nav ul li {
@@ -1024,6 +1044,7 @@ footer p {
         display: block;
         padding: 1rem 2rem;
         border-bottom: 1px solid var(--border);
+        color: var(--white);
     }
 
     nav ul li:last-child a {
@@ -1072,7 +1093,20 @@ footer p {
     transition: all 0.3s ease;
 }
 
+
 .tab-btn:hover:not(.active) {
     background: rgba(255, 255, 255, 0.5) !important;
     color: var(--primary) !important;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
