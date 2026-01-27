@@ -235,15 +235,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function showSection(sectionId) {
-    console.log('showSection called with:', sectionId);
     document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
     const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        console.log('Section activated:', sectionId);
-    } else {
-        console.error('Section not found:', sectionId);
-    }
+    if (targetSection) targetSection.classList.add('active');
 
     document.querySelectorAll('nav a').forEach(a => {
         a.classList.remove('active');
