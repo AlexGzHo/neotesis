@@ -35,6 +35,9 @@
                     <li><a href="#" data-section="citation-tools">Herramientas de Cita</a></li>
                     <li><a href="#" data-section="sample-calculator">Muestra</a></li>
                     <li><a href="#" data-section="ai-chat">Chat con PDF</a></li>
+                    <li id="navAuthItem"><a href="#" onclick="openAuthModal(); return false;" class="auth-link">
+                        <i class="fas fa-user"></i> Iniciar Sesión
+                    </a></li>
                 </ul>
             </nav>
         </div>
@@ -404,63 +407,48 @@
             </div>
         </section>
 
-        <!-- SECCIÓN 4: CHAT PDF CON VISOR -->
+        <!-- SECCIÓN 4: CHAT PDF CON VISOR - 3 COLUMNAS -->
         <section id="ai-chat" class="page-section">
-            <div class="container" style="max-width: 1400px;">
+            <div class="container" style="max-width: 1600px;">
                 <div class="section-header">
                     <h2>Neotesis IA - Chat con PDF</h2>
                     <p>Potenciado por Llama 3.3. Análisis inteligente con referencias visuales al documento.</p>
                 </div>
 
-                <div class="pdf-chat-layout">
-                    <!-- PANEL IZQUIERDO: VISOR DE PDF -->
-                    <div class="pdf-viewer-panel">
-                        <div class="pdf-header">
-                            <div class="pdf-controls">
-                                <input type="file" id="pdfInput" accept="application/pdf" style="display: none;"
-                                    onchange="handlePdfUpload(this)">
-                                <label for="pdfInput" class="pdf-upload-btn">
-                                    <i class="fas fa-file-pdf"></i> Subir PDF
-                                </label>
-                                <div id="pdfStatus" class="pdf-status">
-                                    <i class="fas fa-info-circle"></i> Sube un documento para comenzar
-                                </div>
+                <div class="pdf-chat-layout three-column-layout">
+                    <!-- COLUMNA 1: HISTORIAL DE CHATS -->
+                    <div class="chat-history-sidebar" id="chatHistorySidebar">
+                        <div class="sidebar-header">
+                            <h4><i class="fas fa-history"></i> Mis Chats</h4>
+                            <button class="btn btn-secondary" onclick="createNewChat()" style="padding: 0.5rem 0.8rem; font-size: 0.8rem;">
+                                <i class="fas fa-plus"></i> Nuevo
+                            </button>
+                        </div>
+                        <!-- Notificación de autenticación -->
+                        <div id="authNotification" class="auth-notification" style="display: none;">
+                            <div class="auth-notification-content">
+                                <i class="fas fa-user-lock"></i>
+                                <p style="font-size: 0.85rem;">Inicia sesión</p>
+                                <button class="btn" onclick="openAuthModalFromChat()" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                    <i class="fas fa-sign-in-alt"></i> Ingresar
+                                </button>
                             </div>
                         </div>
-
-                        <div class="pdf-viewer-container">
-                            <div id="pdfViewer" class="pdf-viewer">
-                                <div class="pdf-placeholder">
-                                    <i class="fas fa-file-pdf fa-4x" style="color: var(--border); margin-bottom: 1rem;"></i>
-                                    <p style="color: var(--text-gray); font-size: 1.1rem;">Sube un PDF para visualizarlo aquí</p>
-                                    <small style="color: var(--text-gray);">El documento se procesará para análisis inteligente</small>
-                                </div>
+                        <!-- Lista de Chats (visible solo si está logueado) -->
+                        <div id="chatListPanel" class="chat-list-panel">
+                            <div id="chatList" class="chat-list">
+                                <!-- Lista de chats se carga aquí -->
                             </div>
-
-                            <!-- Controles de navegación del PDF -->
-                            <div id="pdfControls" class="pdf-navigation" style="display: none;">
-                                <button id="prevPage" class="nav-btn" onclick="changePage(-1)">
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                                <span id="pageInfo" class="page-info">Página <span id="currentPage">1</span> de <span id="totalPages">1</span></span>
-                                <button id="nextPage" class="nav-btn" onclick="changePage(1)">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
-                                <div class="zoom-controls">
-                                    <button class="zoom-btn" onclick="zoomPDF(-0.25)">
-                                        <i class="fas fa-search-minus"></i>
-                                    </button>
-                                    <span id="zoomLevel" class="zoom-level">100%</span>
-                                    <button class="zoom-btn" onclick="zoomPDF(0.25)">
-                                        <i class="fas fa-search-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
+                        </div>
+                        <div id="chatEmptyState" class="chat-empty-state">
+                            <i class="fas fa-comments"></i>
+                            <p>Sin chats guardados</p>
+                            <small>Inicia sesión para guardar</small>
                         </div>
                     </div>
 
-                    <!-- PANEL DERECHO: CHAT -->
-                    <div class="chat-panel">
+                    <!-- COLUMNA 2: CHAT PRINCIPAL -->
+                    <div class="chat-panel-main">
                         <!-- Monitoreo de Cuota -->
                         <div class="quota-monitor" id="quotaMonitor">
                             <div class="quota-info">
@@ -468,14 +456,13 @@
                                     <span class="status-dot"></span>
                                     <span id="serviceStatusText">Servicio Activo</span>
                                 </div>
-                                <span id="quotaText">3 / 3 consultas restantes</span>
+                                <span id="quotaText">3 / 3 consultas</span>
                             </div>
                             <div class="quota-bar-container">
                                 <div id="quotaBar" class="quota-bar"></div>
                             </div>
                             <div id="quotaTimer" class="quota-timer" style="display: none;">
-                                <i class="fas fa-clock"></i> El servicio se restablecerá en: <span
-                                    id="countdown">23:59:59</span>
+                                <i class="fas fa-clock"></i> Restablece en: <span id="countdown">23:59:59</span>
                             </div>
                         </div>
 
@@ -501,7 +488,53 @@
                                 </button>
                             </div>
                             <div class="input-hint">
-                                <small>La IA analizará el PDF completo y te mostrará referencias específicas</small>
+                                <small>La IA analizará el PDF y te mostrará referencias específicas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COLUMNA 3: VISOR DE PDF -->
+                    <div class="pdf-viewer-panel">
+                        <div class="pdf-header">
+                            <div class="pdf-controls">
+                                <input type="file" id="pdfInput" accept="application/pdf" style="display: none;"
+                                    onchange="handlePdfUpload(this)">
+                                <label for="pdfInput" class="pdf-upload-btn">
+                                    <i class="fas fa-file-pdf"></i> Subir PDF
+                                </label>
+                                <div id="pdfStatus" class="pdf-status">
+                                    <i class="fas fa-info-circle"></i> Sube un documento
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pdf-viewer-container">
+                            <div id="pdfViewer" class="pdf-viewer">
+                                <div class="pdf-placeholder">
+                                    <i class="fas fa-file-pdf fa-4x" style="color: var(--border); margin-bottom: 1rem;"></i>
+                                    <p style="color: var(--text-gray); font-size: 1rem;">Sube un PDF para visualizarlo</p>
+                                    <small style="color: var(--text-gray); font-size: 0.85rem;">El documento se procesará para análisis inteligente</small>
+                                </div>
+                            </div>
+
+                            <!-- Controles de navegación del PDF -->
+                            <div id="pdfControls" class="pdf-navigation" style="display: none;">
+                                <button id="prevPage" class="nav-btn" onclick="changePage(-1)">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <span id="pageInfo" class="page-info">Página <span id="currentPage">1</span> de <span id="totalPages">1</span></span>
+                                <button id="nextPage" class="nav-btn" onclick="changePage(1)">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <div class="zoom-controls">
+                                    <button class="zoom-btn" onclick="zoomPDF(-0.25)">
+                                        <i class="fas fa-search-minus"></i>
+                                    </button>
+                                    <span id="zoomLevel" class="zoom-level">100%</span>
+                                    <button class="zoom-btn" onclick="zoomPDF(0.25)">
+                                        <i class="fas fa-search-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -513,6 +546,65 @@
     <footer>
         <p>&copy; 2025 Neotesis Perú. Calidad y compromiso en tu investigación académica.</p>
     </footer>
+
+    <!-- MODAL DE LOGIN/REGISTRO -->
+    <div id="authModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeAuthModal()">&times;</span>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')" id="loginTab">Iniciar Sesión</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')" id="registerTab">Registrarse</button>
+            </div>
+            
+            <!-- FORMULARIO LOGIN -->
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" class="form-control" placeholder="tu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="Tu contraseña" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+            </form>
+            
+            <!-- FORMULARIO REGISTRO -->
+            <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="registerEmail" class="form-control" placeholder="tu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="registerPassword" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="registerPasswordConfirm" class="form-control" placeholder="Repite tu contraseña" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">
+                    <i class="fas fa-user-plus"></i> Crear Cuenta
+                </button>
+            </form>
+            
+            <div id="authMessage" class="auth-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- USER MENU (visible cuando está logueado) -->
+    <div id="userMenu" class="user-menu" style="display: none;">
+        <div class="user-info">
+            <i class="fas fa-user-circle"></i>
+            <span id="userEmail"></span>
+        </div>
+        <button class="btn btn-secondary" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </button>
+    </div>
 
     <script src="scripts.js" defer></script>
 </body>

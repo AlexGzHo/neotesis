@@ -23,6 +23,11 @@ const {
 const { sanitizeMiddleware } = require('./middleware/sanitizer');
 const { securityLogger, requestLogger } = require('./utils/logger');
 const { alertPresets } = require('./utils/alerting');
+const { connectDB } = require('./config/database');
+const { User, Chat, Message } = require('./models');
+const { authMiddleware, JWT_SECRET } = require('./middleware/auth');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = SECURITY_CONFIG.PORT;
@@ -180,40 +185,40 @@ app.post('/api/chat',
   chatValidationRules, // Validación de inputs
   handleValidationErrors, // Manejo de errores de validación
   async (req, res) => {
-  const startTime = Date.now();
-  const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-    req.headers['client-ip'] ||
-    req.ip ||
-    'unknown';
+    const startTime = Date.now();
+    const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+      req.headers['client-ip'] ||
+      req.ip ||
+      'unknown';
 
-  try {
-    securityLogger.info('Chat request started', {
-      ip: clientIP,
-      userAgent: req.headers['user-agent'],
-      messageCount: req.body.messages?.length
-    });
-
-    const body = req.body;
-
-    // Validar API key (ya validada en config, pero double-check)
-    const apiKey = SECURITY_CONFIG.GROQ_API_KEY;
-    if (!apiKey) {
-      securityLogger.error('GROQ_API_KEY missing', {}, {
+    try {
+      securityLogger.info('Chat request started', {
         ip: clientIP,
-        endpoint: '/api/chat'
+        userAgent: req.headers['user-agent'],
+        messageCount: req.body.messages?.length
       });
-      alertPresets.apiError('/api/chat', new Error('GROQ_API_KEY not configured'));
-      return res.status(500).json({
-        error: 'Error de configuración del servidor. Contacta al administrador.'
-      });
-    }
 
-    const messages = [];
+      const body = req.body;
 
-  if (body.pdfContext && body.pdfContext.trim().length > 0) {
-      messages.push({
-        role: 'system',
-        content: `-Eres un asistente académico experto que responde ÚNICAMENTE con información extraída del PDF cargado.
+      // Validar API key (ya validada en config, pero double-check)
+      const apiKey = SECURITY_CONFIG.GROQ_API_KEY;
+      if (!apiKey) {
+        securityLogger.error('GROQ_API_KEY missing', {}, {
+          ip: clientIP,
+          endpoint: '/api/chat'
+        });
+        alertPresets.apiError('/api/chat', new Error('GROQ_API_KEY not configured'));
+        return res.status(500).json({
+          error: 'Error de configuración del servidor. Contacta al administrador.'
+        });
+      }
+
+      const messages = [];
+
+      if (body.pdfContext && body.pdfContext.trim().length > 0) {
+        messages.push({
+          role: 'system',
+          content: `-Eres un asistente académico experto que responde ÚNICAMENTE con información extraída del PDF cargado.
 
 Reglas estrictas:
 - No describas la estructura del documento.
@@ -232,132 +237,132 @@ Estilo de respuesta:
 
 Contexto del PDF:
 ${body.pdfContext}`
-      });
-    } else {
-      messages.push({
-        role: 'system',
-        content: 'Eres un asistente académico de Neotesis Perú. Ayuda a los estudiantes con sus consultas académicas de manera clara y precisa.'
-      });
-    }
-
-    messages.push(...body.messages);
-
-    // Función auxiliar para intentar la API con un modelo
-    async function tryGroqAPI(model) {
-      return await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: 2048
-        })
-      });
-    }
-
-    securityLogger.info('Sending request to Groq API', {
-      ip: clientIP,
-      messageCount: messages.length,
-      model: PRIMARY_MODEL
-    });
-
-    let groqResponse = await tryGroqAPI(PRIMARY_MODEL);
-    securityLogger.info('Groq API response (primary)', {
-      ip: clientIP,
-      status: groqResponse.status,
-      model: PRIMARY_MODEL
-    });
-
-    if (groqResponse.status === 429) {
-      securityLogger.warn('Primary model rate limited, trying secondary', {
-        ip: clientIP,
-        primaryModel: PRIMARY_MODEL
-      });
-      groqResponse = await tryGroqAPI(SECONDARY_MODEL);
-      securityLogger.info('Groq API response (secondary)', {
-        ip: clientIP,
-        status: groqResponse.status,
-        model: SECONDARY_MODEL
-      });
-    }
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      const error = new Error(`Groq API error: ${groqResponse.status}`);
-
-      securityLogger.apiError('/api/chat', error, {
-        ip: clientIP,
-        status: groqResponse.status,
-        response: errorText.substring(0, 500) // Limitar log
-      });
-
-      if (groqResponse.status === 401) {
-        alertPresets.apiError('/api/chat', error);
-        return res.status(500).json({
-          error: 'Error de autenticación con el servicio de IA. Contacta al administrador.'
+        });
+      } else {
+        messages.push({
+          role: 'system',
+          content: 'Eres un asistente académico de Neotesis Perú. Ayuda a los estudiantes con sus consultas académicas de manera clara y precisa.'
         });
       }
+
+      messages.push(...body.messages);
+
+      // Función auxiliar para intentar la API con un modelo
+      async function tryGroqAPI(model) {
+        return await fetch(GROQ_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 2048
+          })
+        });
+      }
+
+      securityLogger.info('Sending request to Groq API', {
+        ip: clientIP,
+        messageCount: messages.length,
+        model: PRIMARY_MODEL
+      });
+
+      let groqResponse = await tryGroqAPI(PRIMARY_MODEL);
+      securityLogger.info('Groq API response (primary)', {
+        ip: clientIP,
+        status: groqResponse.status,
+        model: PRIMARY_MODEL
+      });
 
       if (groqResponse.status === 429) {
-        return res.status(503).json({
-          error: 'El servicio de IA está temporalmente sobrecargado. Intenta de nuevo en unos minutos.'
+        securityLogger.warn('Primary model rate limited, trying secondary', {
+          ip: clientIP,
+          primaryModel: PRIMARY_MODEL
+        });
+        groqResponse = await tryGroqAPI(SECONDARY_MODEL);
+        securityLogger.info('Groq API response (secondary)', {
+          ip: clientIP,
+          status: groqResponse.status,
+          model: SECONDARY_MODEL
+        });
+      }
+      if (!groqResponse.ok) {
+        const errorText = await groqResponse.text();
+        const error = new Error(`Groq API error: ${groqResponse.status}`);
+
+        securityLogger.apiError('/api/chat', error, {
+          ip: clientIP,
+          status: groqResponse.status,
+          response: errorText.substring(0, 500) // Limitar log
+        });
+
+        if (groqResponse.status === 401) {
+          alertPresets.apiError('/api/chat', error);
+          return res.status(500).json({
+            error: 'Error de autenticación con el servicio de IA. Contacta al administrador.'
+          });
+        }
+
+        if (groqResponse.status === 429) {
+          return res.status(503).json({
+            error: 'El servicio de IA está temporalmente sobrecargado. Intenta de nuevo en unos minutos.'
+          });
+        }
+
+        alertPresets.apiError('/api/chat', error);
+        return res.status(500).json({
+          error: 'Error al comunicarse con el servicio de IA. Intenta de nuevo.'
         });
       }
 
-      alertPresets.apiError('/api/chat', error);
-      return res.status(500).json({
-        error: 'Error al comunicarse con el servicio de IA. Intenta de nuevo.'
-      });
-    }
+      const groqData = await groqResponse.json();
 
-    const groqData = await groqResponse.json();
+      // Verificar que la respuesta tenga la estructura esperada
+      if (!groqData.choices || !Array.isArray(groqData.choices) || groqData.choices.length === 0) {
+        securityLogger.error('Invalid Groq API response structure', {}, {
+          ip: clientIP,
+          response: JSON.stringify(groqData).substring(0, 500)
+        });
+        return res.status(500).json({
+          error: 'Respuesta inválida del servicio de IA',
+          message: groqData.error || 'La API no devolvió una respuesta válida'
+        });
+      }
 
-    // Verificar que la respuesta tenga la estructura esperada
-    if (!groqData.choices || !Array.isArray(groqData.choices) || groqData.choices.length === 0) {
-      securityLogger.error('Invalid Groq API response structure', {}, {
+      // Log de éxito y métricas
+      const duration = Date.now() - startTime;
+      securityLogger.successfulRequest('/api/chat', duration, {
         ip: clientIP,
-        response: JSON.stringify(groqData).substring(0, 500)
+        tokensUsed: groqData.usage?.total_tokens || 0
       });
-      return res.status(500).json({
-        error: 'Respuesta inválida del servicio de IA',
-        message: groqData.error || 'La API no devolvió una respuesta válida'
+
+      // Headers de rate limiting (legacy para compatibilidad)
+      res.set({
+        'X-RateLimit-Limit': MAX_REQUESTS_PER_IP.toString(),
+        'X-RateLimit-Remaining': (MAX_REQUESTS_PER_IP - 1).toString(), // Simplificado
+        'X-RateLimit-Reset': (Date.now() + RATE_LIMIT_WINDOW).toString()
+      });
+
+      res.json(groqData);
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      securityLogger.apiError('/api/chat', error, {
+        ip: clientIP,
+        duration,
+        userAgent: req.headers['user-agent']
+      });
+
+      // No exponer detalles sensibles del error
+      res.status(500).json({
+        error: 'Error interno del servidor. Intenta de nuevo más tarde.',
+        message: process.env.NODE_ENV === 'development' ? error.message : 'Servicio temporalmente no disponible'
       });
     }
-
-    // Log de éxito y métricas
-    const duration = Date.now() - startTime;
-    securityLogger.successfulRequest('/api/chat', duration, {
-      ip: clientIP,
-      tokensUsed: groqData.usage?.total_tokens || 0
-    });
-
-    // Headers de rate limiting (legacy para compatibilidad)
-    res.set({
-      'X-RateLimit-Limit': MAX_REQUESTS_PER_IP.toString(),
-      'X-RateLimit-Remaining': (MAX_REQUESTS_PER_IP - 1).toString(), // Simplificado
-      'X-RateLimit-Reset': (Date.now() + RATE_LIMIT_WINDOW).toString()
-    });
-
-    res.json(groqData);
-
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    securityLogger.apiError('/api/chat', error, {
-      ip: clientIP,
-      duration,
-      userAgent: req.headers['user-agent']
-    });
-
-    // No exponer detalles sensibles del error
-    res.status(500).json({
-      error: 'Error interno del servidor. Intenta de nuevo más tarde.',
-      message: process.env.NODE_ENV === 'development' ? error.message : 'Servicio temporalmente no disponible'
-    });
-  }
-});
+  });
 
 // Configuración para proxy (usando configuración centralizada)
 const REQUEST_TIMEOUT = SECURITY_CONFIG.PAYLOAD.REQUEST_TIMEOUT_MS;
@@ -415,149 +420,149 @@ app.post('/api/proxy',
   proxyValidationRules, // Validación de URLs
   handleValidationErrors, // Manejo de errores de validación
   async (req, res) => {
-  const startTime = Date.now();
-  const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-    req.headers['client-ip'] ||
-    req.ip ||
-    'unknown';
+    const startTime = Date.now();
+    const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+      req.headers['client-ip'] ||
+      req.ip ||
+      'unknown';
 
-  try {
-    securityLogger.info('Proxy request started', {
-      ip: clientIP,
-      url: req.body.url?.substring(0, 100), // Log solo el inicio de la URL
-      userAgent: req.headers['user-agent']
-    });
-
-    const body = req.body;
-
-    let sanitizedUrl;
     try {
-      sanitizedUrl = sanitizeUrl(body.url);
-    } catch (e) {
-      securityLogger.validationFailed('/api/proxy', ['Invalid URL format'], {
+      securityLogger.info('Proxy request started', {
         ip: clientIP,
-        url: body.url?.substring(0, 100)
-      });
-      return res.status(400).json({ error: e.message });
-    }
-
-    if (!isAllowedDomain(sanitizedUrl)) {
-      securityLogger.unauthorizedAccess(clientIP, '/api/proxy', {
-        reason: 'Domain not allowed',
-        url: sanitizedUrl
-      });
-      return res.status(403).json({
-        error: 'Dominio no permitido',
-        message: 'Solo se permiten solicitudes a repositorios académicos y bases de datos científicas autorizadas'
-      });
-    }
-
-    const response = await fetchWithTimeout(sanitizedUrl, {
-      headers: SECURITY_CONFIG.PROXY.HEADERS
-    });
-
-    if (!response.ok) {
-      securityLogger.warn('Proxy request failed', {
-        ip: clientIP,
-        url: sanitizedUrl,
-        status: response.status
+        url: req.body.url?.substring(0, 100), // Log solo el inicio de la URL
+        userAgent: req.headers['user-agent']
       });
 
-      if (response.status === 404) {
-        return res.status(404).json({
-          error: 'Recurso no encontrado',
-          message: 'La URL solicitada no existe o no está disponible'
-        });
-      }
+      const body = req.body;
 
-      if (response.status === 403 || response.status === 401) {
-        return res.status(403).json({
-          error: 'Acceso denegado',
-          message: 'El sitio web requiere autenticación o tiene protección anti-scraping'
-        });
-      }
-
-      return res.status(response.status).json({
-        error: `Error HTTP ${response.status}`,
-        message: 'No se pudo obtener el contenido del sitio web'
-      });
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    const text = await response.text();
-
-    if (text.length > MAX_RESPONSE_SIZE) {
-      return res.status(413).json({
-        error: 'Contenido demasiado grande',
-        message: 'El documento excede el tamaño máximo permitido'
-      });
-    }
-
-    let responseData;
-    if (contentType.includes('application/json')) {
+      let sanitizedUrl;
       try {
-        responseData = {
-          type: 'json',
-          content: JSON.parse(text)
-        };
+        sanitizedUrl = sanitizeUrl(body.url);
       } catch (e) {
+        securityLogger.validationFailed('/api/proxy', ['Invalid URL format'], {
+          ip: clientIP,
+          url: body.url?.substring(0, 100)
+        });
+        return res.status(400).json({ error: e.message });
+      }
+
+      if (!isAllowedDomain(sanitizedUrl)) {
+        securityLogger.unauthorizedAccess(clientIP, '/api/proxy', {
+          reason: 'Domain not allowed',
+          url: sanitizedUrl
+        });
+        return res.status(403).json({
+          error: 'Dominio no permitido',
+          message: 'Solo se permiten solicitudes a repositorios académicos y bases de datos científicas autorizadas'
+        });
+      }
+
+      const response = await fetchWithTimeout(sanitizedUrl, {
+        headers: SECURITY_CONFIG.PROXY.HEADERS
+      });
+
+      if (!response.ok) {
+        securityLogger.warn('Proxy request failed', {
+          ip: clientIP,
+          url: sanitizedUrl,
+          status: response.status
+        });
+
+        if (response.status === 404) {
+          return res.status(404).json({
+            error: 'Recurso no encontrado',
+            message: 'La URL solicitada no existe o no está disponible'
+          });
+        }
+
+        if (response.status === 403 || response.status === 401) {
+          return res.status(403).json({
+            error: 'Acceso denegado',
+            message: 'El sitio web requiere autenticación o tiene protección anti-scraping'
+          });
+        }
+
+        return res.status(response.status).json({
+          error: `Error HTTP ${response.status}`,
+          message: 'No se pudo obtener el contenido del sitio web'
+        });
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      const text = await response.text();
+
+      if (text.length > MAX_RESPONSE_SIZE) {
+        return res.status(413).json({
+          error: 'Contenido demasiado grande',
+          message: 'El documento excede el tamaño máximo permitido'
+        });
+      }
+
+      let responseData;
+      if (contentType.includes('application/json')) {
+        try {
+          responseData = {
+            type: 'json',
+            content: JSON.parse(text)
+          };
+        } catch (e) {
+          responseData = {
+            type: 'text',
+            content: text
+          };
+        }
+      } else {
         responseData = {
-          type: 'text',
+          type: contentType.includes('xml') ? 'xml' : 'html',
           content: text
         };
       }
-    } else {
-      responseData = {
-        type: contentType.includes('xml') ? 'xml' : 'html',
-        content: text
-      };
-    }
 
-    // Log de éxito
-    const duration = Date.now() - startTime;
-    securityLogger.successfulRequest('/api/proxy', duration, {
-      ip: clientIP,
-      url: sanitizedUrl,
-      size: text.length
-    });
+      // Log de éxito
+      const duration = Date.now() - startTime;
+      securityLogger.successfulRequest('/api/proxy', duration, {
+        ip: clientIP,
+        url: sanitizedUrl,
+        size: text.length
+      });
 
-    res.set('Cache-Control', 'public, max-age=3600');
-    res.json({
-      success: true,
-      url: sanitizedUrl,
-      data: responseData,
-      contentType: contentType,
-      size: text.length
-    });
+      res.set('Cache-Control', 'public, max-age=3600');
+      res.json({
+        success: true,
+        url: sanitizedUrl,
+        data: responseData,
+        contentType: contentType,
+        size: text.length
+      });
 
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    securityLogger.apiError('/api/proxy', error, {
-      ip: clientIP,
-      url: sanitizedUrl,
-      duration
-    });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      securityLogger.apiError('/api/proxy', error, {
+        ip: clientIP,
+        url: sanitizedUrl,
+        duration
+      });
 
-    if (error.message.includes('Timeout')) {
-      return res.status(504).json({
-        error: 'Timeout',
-        message: 'La solicitud tardó demasiado tiempo. El sitio web puede estar lento o no disponible.'
+      if (error.message.includes('Timeout')) {
+        return res.status(504).json({
+          error: 'Timeout',
+          message: 'La solicitud tardó demasiado tiempo. El sitio web puede estar lento o no disponible.'
+        });
+      }
+
+      if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return res.status(503).json({
+          error: 'Sitio no disponible',
+          message: 'No se pudo conectar con el sitio web. Verifica que la URL sea correcta.'
+        });
+      }
+
+      res.status(500).json({
+        error: 'Error interno del servidor',
+        message: error.message
       });
     }
-
-    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-      return res.status(503).json({
-        error: 'Sitio no disponible',
-        message: 'No se pudo conectar con el sitio web. Verifica que la URL sea correcta.'
-      });
-    }
-
-    res.status(500).json({
-      error: 'Error interno del servidor',
-      message: error.message
-    });
-  }
-});
+  });
 
 // Endpoint para información de usuario (sin autenticación)
 app.get('/api/v4/user', (req, res) => {
@@ -567,10 +572,166 @@ app.get('/api/v4/user', (req, res) => {
   });
 });
 
+// ============================================================================
+// RUTAS DE AUTENTICACIÓN
+// ============================================================================
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ email, password_hash: hashedPassword });
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(201).json({ message: 'Usuario registrado', token, user: { id: user.id, email: user.email } });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: 'El email ya está registrado' });
+    }
+    res.status(500).json({ error: 'Error al registrar usuario' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
+
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+
+    // Update last login
+    user.last_login = new Date();
+    await user.save();
+
+    res.json({ message: 'Login exitoso', token, user: { id: user.id, email: user.email } });
+  } catch (error) {
+    res.status(500).json({ error: 'Error en login' });
+  }
+});
+
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, { attributes: ['id', 'email'] });
+    res.json({ authenticated: true, user });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener usuario' });
+  }
+});
+
+// ============================================================================
+// RUTAS DE CHAT (PROTEGIDAS)
+// ============================================================================
+
+app.get('/api/chats', authMiddleware, async (req, res) => {
+  try {
+    const chats = await Chat.findAll({
+      where: { user_id: req.user.id },
+      order: [['updatedAt', 'DESC']],
+      attributes: ['id', 'title', 'updatedAt']
+    });
+    res.json(chats);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener chats' });
+  }
+});
+
+app.post('/api/chats', authMiddleware, async (req, res) => {
+  try {
+    const { title, initialMessage } = req.body;
+    const chat = await Chat.create({
+      user_id: req.user.id,
+      title: title || 'Nuevo Chat'
+    });
+
+    if (initialMessage) {
+      await Message.create({
+        chat_id: chat.id,
+        role: 'user',
+        content: initialMessage
+      });
+    }
+
+    res.status(201).json(chat);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear chat' });
+  }
+});
+
+app.get('/api/chats/:id', authMiddleware, async (req, res) => {
+  try {
+    const chat = await Chat.findOne({
+      where: { id: req.params.id, user_id: req.user.id },
+      include: [{ model: Message, order: [['createdAt', 'ASC']] }]
+    });
+
+    if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
+
+    res.json(chat);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener chat' });
+  }
+});
+
+app.post('/api/chats/:id/messages', authMiddleware, async (req, res) => {
+  try {
+    const { role, content } = req.body;
+    const chat = await Chat.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+
+    if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
+
+    const message = await Message.create({
+      chat_id: chat.id,
+      role,
+      content
+    });
+
+    // Update chat timestamp
+    chat.changed('updatedAt', true);
+    await chat.save();
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al guardar mensaje' });
+  }
+});
+
+// DELETE chat by ID
+app.delete('/api/chats/:id', authMiddleware, async (req, res) => {
+  try {
+    const chat = await Chat.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat no encontrado' });
+    }
+
+    // Delete all messages first
+    await Message.destroy({ where: { chat_id: chat.id } });
+
+    // Delete the chat
+    await chat.destroy();
+
+    res.status(200).json({ message: 'Chat eliminado correctamente' });
+  } catch (error) {
+    console.error('Error deleting chat:', error);
+    res.status(500).json({ error: 'Error al eliminar chat' });
+  }
+});
+
 /**
  * INICIO DEL SERVIDOR CON LOGGING DE SEGURIDAD
  */
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await connectDB(); // Connect to Database on start
+
   securityLogger.info('Server started', {
     port: PORT,
     environment: SECURITY_CONFIG.NODE_ENV,

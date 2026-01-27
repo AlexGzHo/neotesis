@@ -55,12 +55,22 @@ Asegúrate de que estos archivos estén presentes:
 
 1. Una vez creado el proyecto, ve a la pestaña **Variables**
 2. Haz clic en **Add Variable**
-3. Agrega la siguiente variable:
-   - **Key**: `GROQ_API_KEY`
-   - **Value**: Tu API key de Groq (ej: `gsk_...`)
+3. Agrega las siguientes variables:
+   - **Key**: `GROQ_API_KEY` | **Value**: Tu API key de Groq (ej: `gsk_...`)
+   - **Key**: `DATABASE_URL` | **Value**: (se genera automáticamente al crear el servicio PostgreSQL)
+   - **Key**: `JWT_SECRET` | **Value**: Una cadena larga y aleatoria (mínimo 32 caracteres)
 4. Haz clic en **Add**
 
-### 3.3 Verificar el Deployment
+### 3.3 Crear Servicio de Base de Datos PostgreSQL
+
+1. En tu proyecto de Railway, haz clic en **+ New Service**
+2. Selecciona **Database** → **PostgreSQL**
+3. Railway creará automáticamente la base de datos y generará la variable `DATABASE_URL`
+4. La variable `DATABASE_URL` ya estará configurada en tu proyecto
+
+> ⚠️ **Importante**: La variable `DATABASE_URL` es crítica para la conexión a la base de datos. Railway la genera automáticamente cuando creas el servicio PostgreSQL.
+
+### 3.4 Verificar el Deployment
 
 Railway comenzará automáticamente el build y deployment. Esto puede tomar 2-3 minutos.
 

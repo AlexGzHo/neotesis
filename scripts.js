@@ -219,17 +219,6 @@ async function secureFetch(url, options = {}) {
   }
 }
 
-// Inicializar seguridad al cargar
-document.addEventListener('DOMContentLoaded', () => {
-  updateQuotaUI();
-  resetSessionTimer();
-
-  // Monitorear actividad del usuario
-  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
-    document.addEventListener(event, updateActivity, true);
-  });
-});
-
 // ============================================================================
 // NAVEGACIÓN Y UI GENERAL
 // ============================================================================
@@ -1138,7 +1127,17 @@ function highlightPdfReference(pageNum, textSnippet = "") {
 // CHAT IA - ENVÍO DE MENSAJES (SERVERLESS)
 // ============================================================================
 
+// Estado para chats pendientes de respuesta AI
+let pendingUserMessages = [];
+let hasAIResponded = false;
+
 async function sendMessage() {
+  // Verificar autenticación
+  if (!isLoggedIn) {
+    showAuthNotification();
+    return;
+  }
+
   const data = getQuotaData();
   if (!DISABLE_QUOTA && (data.count >= MAX_QUOTA || data.tokens >= MAX_TOKENS)) {
     updateQuotaUI();
@@ -1170,17 +1169,26 @@ async function sendMessage() {
       </div>
     </div>
   `;
-    history.push({ role: "user", content: msg });
+  
+  // Agregar a historial local
+  history.push({ role: "user", content: msg });
+  
+  // AGREGAR A PENDIENTES (NO guardar en DB todavía)
+  pendingUserMessages.push({ role: "user", content: msg });
 
-    try {
-      // Llamar a la API de forma segura
-      const res = await secureFetch("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({
-          messages: history,
-          pdfContext: (pdfContextForAI && pdfContextForAI.length > 0) ? pdfContextForAI : pdfText
-        })
-      });
+  // Scroll al final
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    // Llamar a la API de forma segura
+    const res = await secureFetch("/api/chat", {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        messages: history,
+        pdfContext: (pdfContextForAI && pdfContextForAI.length > 0) ? pdfContextForAI : pdfText
+      })
+    });
 
         // Manejar rate limiting del servidor
         if (res.status === 429) {
@@ -1282,6 +1290,40 @@ async function sendMessage() {
         history.push({ role: "assistant", content: rawReply });
         chat.scrollTop = chat.scrollHeight;
 
+        // SOLO GUARDAR DESPUÉS DE RESPUESTA EXITOSA DE LA AI
+        // Crear chat y guardar todos los mensajes (pendientes + AI) si es la primera respuesta
+        if (!hasAIResponded) {
+            try {
+                // Generar título desde el primer mensaje del usuario
+                const title = generateChatTitle(pendingUserMessages);
+                
+                // Crear nuevo chat en la base de datos
+                currentChatId = await createChat(title);
+                
+                // Guardar todos los mensajes pendientes del usuario
+                for (const msg of pendingUserMessages) {
+                    await saveChatMessage(currentChatId, msg.role, msg.content);
+                }
+                
+                // Guardar respuesta del assistant
+                await saveChatMessage(currentChatId, 'assistant', rawReply);
+                
+                // Limpiar pendientes y marcar que ya hay respuesta
+                pendingUserMessages = [];
+                hasAIResponded = true;
+                
+                // Recargar lista de chats para mostrar el nuevo
+                await loadChatList();
+                
+            } catch (saveError) {
+                console.error('Error guardando chat:', saveError);
+                // Los mensajes se mantienen en memoria para reintentar
+            }
+        } else if (currentChatId) {
+            // Chat ya existe, guardar solo el mensaje del assistant
+            await saveChatMessage(currentChatId, 'assistant', rawReply);
+        }
+
         // Actualizar cuota tras éxito
         if (!data.firstUsed) data.firstUsed = Date.now();
         data.count++;
@@ -1348,3 +1390,584 @@ function switchCitationTool(tool) {
         document.getElementById('apaResult').style.display = 'none';
     }
 }
+
+// ============================================================================
+// AUTENTICACIÓN
+// ============================================================================
+
+// Estado de autenticación
+let isLoggedIn = false;
+let authToken = null;
+let currentUser = null;
+
+/**
+ * Inicializar estado de autenticación desde localStorage
+ */
+function initAuth() {
+    const storedToken = localStorage.getItem('neotesis_token');
+    const storedUser = localStorage.getItem('neotesis_user');
+    
+    if (storedToken && storedUser) {
+        try {
+            authToken = storedToken;
+            currentUser = JSON.parse(storedUser);
+            isLoggedIn = true;
+            updateAuthUI();
+            updateChatAuthUI();
+        } catch (e) {
+            console.error('[Auth] Error parsing stored user:', e);
+        }
+    }
+}
+
+/**
+ * Actualizar UI según estado de autenticación
+ */
+function updateAuthUI() {
+    const navAuthItem = document.getElementById('navAuthItem');
+    
+    if (!navAuthItem) {
+        setTimeout(updateAuthUI, 50);
+        return;
+    }
+    
+    if (isLoggedIn && currentUser) {
+        navAuthItem.innerHTML = `
+            <div class="user-menu">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span>${currentUser.email}</span>
+                </div>
+                <button class="btn btn-secondary" onclick="handleLogout()" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+            </div>
+        `;
+    } else {
+        navAuthItem.innerHTML = `
+            <a href="#" onclick="openAuthModal(); return false;" class="auth-link">
+                <i class="fas fa-user"></i> Iniciar Sesión
+            </a>
+        `;
+    }
+}
+
+/**
+ * Abrir modal de autenticación
+ */
+function openAuthModal() {
+    document.getElementById('authModal').style.display = 'flex';
+    document.getElementById('authMessage').style.display = 'none';
+    switchAuthTab('login');
+}
+
+/**
+ * Cerrar modal de autenticación
+ */
+function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+    document.getElementById('loginForm').reset();
+    document.getElementById('registerForm').reset();
+}
+
+/**
+ * Cambiar entre tabs de login/register
+ */
+function switchAuthTab(tab) {
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const messageBox = document.getElementById('authMessage');
+    
+    messageBox.style.display = 'none';
+    
+    if (tab === 'login') {
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+    } else {
+        loginTab.classList.remove('active');
+        registerTab.classList.add('active');
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+    }
+}
+
+/**
+ * Mostrar mensaje de autenticación
+ */
+function showAuthMessage(message, type) {
+    const messageBox = document.getElementById('authMessage');
+    messageBox.textContent = message;
+    messageBox.className = 'auth-message ' + type;
+    messageBox.style.display = 'block';
+}
+
+/**
+ * Manejar login
+ */
+async function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        showAuthMessage('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al iniciar sesión');
+        }
+        
+        // Guardar token y usuario
+        authToken = data.token;
+        currentUser = data.user;
+        isLoggedIn = true;
+        
+        localStorage.setItem('neotesis_token', authToken);
+        localStorage.setItem('neotesis_user', JSON.stringify(currentUser));
+        
+        showAuthMessage('¡Inicio de sesión exitoso!', 'success');
+        
+        setTimeout(() => {
+            closeAuthModal();
+            updateAuthUI();
+            updateChatAuthUI();
+            
+            // Guardar mensajes pendientes si los hay
+            if (pendingMessages.length > 0) {
+                createNewChat().then(() => {
+                    pendingMessages.forEach(msg => {
+                        saveChatMessage(currentChatId, msg.role, msg.content);
+                    });
+                    pendingMessages = [];
+                });
+            }
+        }, 1000);
+        
+    } catch (error) {
+        showAuthMessage(error.message, 'error');
+    }
+}
+
+/**
+ * Manejar registro
+ */
+async function handleRegister(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+    
+    if (!email || !password || !passwordConfirm) {
+        showAuthMessage('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    if (password !== passwordConfirm) {
+        showAuthMessage('Las contraseñas no coinciden', 'error');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showAuthMessage('La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al registrar usuario');
+        }
+        
+        // Guardar token y usuario
+        authToken = data.token;
+        currentUser = data.user;
+        isLoggedIn = true;
+        
+        localStorage.setItem('neotesis_token', authToken);
+        localStorage.setItem('neotesis_user', JSON.stringify(currentUser));
+        
+        showAuthMessage('¡Cuenta creada exitosamente!', 'success');
+        
+        setTimeout(() => {
+            closeAuthModal();
+            updateAuthUI();
+            updateChatAuthUI();
+        }, 1500);
+        
+    } catch (error) {
+        showAuthMessage(error.message, 'error');
+    }
+}
+
+/**
+ * Manejar logout
+ */
+function handleLogout() {
+    authToken = null;
+    currentUser = null;
+    isLoggedIn = false;
+    
+    localStorage.removeItem('neotesis_token');
+    localStorage.removeItem('neotesis_user');
+    
+    updateAuthUI();
+    
+    // Recargar página para limpiar estado
+    window.location.reload();
+}
+
+/**
+ * Obtener headers de autenticación
+ */
+function getAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    
+    return headers;
+}
+
+// ============================================================================
+// GESTIÓN DE CHATS
+// ============================================================================
+
+let currentChatId = null;
+let pendingMessages = []; // Mensajes pendientes de guardar si no hay chat activo
+
+/**
+ * Mostrar notificación de autenticación
+ */
+function showAuthNotification() {
+    const notification = document.getElementById('authNotification');
+    if (notification) {
+        notification.style.display = 'block';
+    }
+}
+
+/**
+ * Ocultar notificación de autenticación
+ */
+function hideAuthNotification() {
+    const notification = document.getElementById('authNotification');
+    if (notification) {
+        notification.style.display = 'none';
+    }
+}
+
+/**
+ * Abrir modal de auth desde el chat
+ */
+function openAuthModalFromChat() {
+    openAuthModal();
+}
+
+/**
+ * Generar título de chat desde el primer mensaje del usuario
+ */
+function generateChatTitle(messages) {
+    const firstUserMsg = messages.find(m => m.role === 'user');
+    if (!firstUserMsg) return 'Nuevo Chat';
+    
+    // Limpiar y truncar el mensaje para usar como título
+    const title = firstUserMsg.content
+        .replace(/<[^>]*>/g, '') // Remover HTML
+        .replace(/\s+/g, ' ') // Normalizar espacios
+        .trim();
+    
+    // Limitar a 40 caracteres
+    if (title.length <= 40) return title;
+    return title.substring(0, 40) + '...';
+}
+
+/**
+ * Crear nuevo chat
+ */
+async function createNewChat() {
+    if (!isLoggedIn || !authToken) return;
+    
+    // Resetear estado local
+    currentChatId = null;
+    pendingUserMessages = [];
+    hasAIResponded = false;
+    history = [];
+    
+    // Limpiar chat UI
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.innerHTML = `
+        <div class="msg ai">
+            <div class="ai-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="msg-content">
+                <strong>Neotesis IA:</strong> Nuevo chat creado. Sube un PDF y podré responder preguntas específicas sobre su contenido.
+            </div>
+        </div>
+    `;
+    
+    // Nota: NO creamos el chat en la base de datos todavía
+    // Se creará automáticamente cuando la AI responda al primer mensaje
+    
+    console.log('Listo para nuevo chat. Se guardará cuando la AI responda.');
+}
+
+/**
+ * Guardar mensaje en el chat
+ */
+async function saveChatMessage(chatId, role, content) {
+    if (!isLoggedIn || !authToken) return;
+    
+    try {
+        await fetch(`/api/chats/${chatId}/messages`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ role, content })
+        });
+    } catch (error) {
+        console.error('Error saving message:', error);
+    }
+}
+
+/**
+ * Cargar lista de chats
+ */
+async function loadChatList() {
+    if (!isLoggedIn || !authToken) return;
+    
+    const chatListPanel = document.getElementById('chatListPanel');
+    const chatList = document.getElementById('chatList');
+    const chatEmptyState = document.getElementById('chatEmptyState');
+    
+    if (!chatListPanel || !chatList) return;
+    
+    try {
+        const response = await fetch('/api/chats', {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error cargando chats');
+        }
+        
+        const chats = await response.json();
+        
+        if (chats.length === 0) {
+            chatListPanel.style.display = 'none';
+            if (chatEmptyState) chatEmptyState.style.display = 'flex';
+            return;
+        }
+        
+        chatListPanel.style.display = 'block';
+        if (chatEmptyState) chatEmptyState.style.display = 'none';
+        
+        chatList.innerHTML = chats.map(chat => {
+            const date = new Date(chat.updatedAt).toLocaleDateString('es-PE');
+            return `
+                <div class="chat-item ${currentChatId === chat.id ? 'active' : ''}" 
+                     onclick="loadChat('${chat.id}')">
+                    <div class="chat-item-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="chat-item-info">
+                        <div class="chat-item-title">${sanitizeText(chat.title)}</div>
+                        <div class="chat-item-date">${date}</div>
+                    </div>
+                    <button class="chat-item-delete" onclick="event.stopPropagation(); deleteChat('${chat.id}')" title="Eliminar chat">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading chats:', error);
+    }
+}
+
+/**
+ * Eliminar un chat
+ */
+async function deleteChat(chatId) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este chat? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/chats/${chatId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al eliminar chat');
+        }
+        
+        // Si se eliminó el chat actual, limpiar UI
+        if (currentChatId === chatId) {
+            currentChatId = null;
+            history = [];
+            pendingUserMessages = [];
+            hasAIResponded = false;
+            
+            // Limpiar chat UI
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.innerHTML = `
+                    <div class="msg ai">
+                        <div class="ai-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="msg-content">
+                            <strong>Neotesis IA:</strong> Chat eliminado. Sube un PDF y podré responder preguntas específicas sobre su contenido.
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Recargar lista
+        await loadChatList();
+        
+    } catch (error) {
+        console.error('Error deleting chat:', error);
+        alert('Error al eliminar el chat. Por favor, intenta de nuevo.');
+    }
+}
+
+/**
+ * Cargar un chat específico
+ */
+async function loadChat(chatId) {
+    if (!isLoggedIn || !authToken) return;
+    
+    currentChatId = chatId;
+    
+    // Resetear estado de pendientes
+    pendingUserMessages = [];
+    hasAIResponded = true; // Ya hay un chat cargado, quindi ya tiene respuestas
+    
+    try {
+        const response = await fetch(`/api/chats/${chatId}`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error cargando chat');
+        }
+        
+        const chat = await response.json();
+        const messages = chat.Messages || [];
+        
+        // Limpiar messages locales
+        history = [];
+        
+        // Cargar messages en UI
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.innerHTML = '';
+        
+        messages.forEach(msg => {
+            const isUser = msg.role === 'user';
+            chatMessages.innerHTML += `
+                <div class="msg ${isUser ? 'user' : 'ai'}">
+                    <div class="ai-avatar">
+                        <i class="fas fa-${isUser ? 'user' : 'robot'}"></i>
+                    </div>
+                    <div class="msg-content">
+                        <strong>${isUser ? 'Tú' : 'Neotesis IA'}:</strong> ${sanitizeHTML(msg.content)}
+                    </div>
+                </div>
+            `;
+            
+            // Agregar al history (solo content, no incluir el del assistant para no duplicar)
+            if (msg.role === 'user') {
+                history.push({ role: 'user', content: msg.content });
+            }
+        });
+        
+        // Actualizar lista para mostrar el chat activo
+        await loadChatList();
+        
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+    } catch (error) {
+        console.error('Error loading chat:', error);
+    }
+}
+
+/**
+ * Actualizar UI del chat según estado de autenticación
+ */
+function updateChatAuthUI() {
+    const chatListPanel = document.getElementById('chatListPanel');
+    const chatEmptyState = document.getElementById('chatEmptyState');
+    const authNotification = document.getElementById('authNotification');
+    
+    if (isLoggedIn && currentUser) {
+        hideAuthNotification();
+        loadChatList();
+    } else {
+        if (chatListPanel) {
+            chatListPanel.style.display = 'none';
+        }
+        if (chatEmptyState) {
+            chatEmptyState.style.display = 'flex';
+        }
+        if (authNotification) {
+            authNotification.style.display = 'block';
+        }
+        currentChatId = null;
+        pendingUserMessages = [];
+        hasAIResponded = false;
+    }
+}
+
+// Inicializar auth al cargar
+document.addEventListener('DOMContentLoaded', () => {
+    initAuth();
+    updateQuotaUI();
+    resetSessionTimer();
+    
+    // Monitorear actividad del usuario
+    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+        document.addEventListener(event, updateActivity, true);
+    });
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('authModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('authModal')) {
+            closeAuthModal();
+        }
+    });
+});
