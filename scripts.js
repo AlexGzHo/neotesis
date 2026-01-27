@@ -1403,7 +1403,7 @@ let currentUser = null;
 /**
  * Inicializar estado de autenticación desde localStorage
  */
-function initAuth() {
+async function initAuth() {
     const storedToken = localStorage.getItem('neotesis_token');
     const storedUser = localStorage.getItem('neotesis_user');
     
@@ -1411,12 +1411,63 @@ function initAuth() {
         try {
             authToken = storedToken;
             currentUser = JSON.parse(storedUser);
-            isLoggedIn = true;
-            updateAuthUI();
-            updateChatAuthUI();
+            
+            // Verificar token con el servidor
+            const isValid = await verifyAuthToken();
+            
+            if (isValid) {
+                isLoggedIn = true;
+                updateAuthUI();
+                updateChatAuthUI();
+            } else {
+                // Token inválido - limpiar
+                console.log('[Auth] Token inválido, limpiando sesión');
+                localStorage.removeItem('neotesis_token');
+                localStorage.removeItem('neotesis_user');
+                authToken = null;
+                currentUser = null;
+                isLoggedIn = false;
+            }
         } catch (e) {
-            console.error('[Auth] Error parsing stored user:', e);
+            console.error('[Auth] Error verifying stored auth:', e);
+            // Limpiar datos inválidos
+            localStorage.removeItem('neotesis_token');
+            localStorage.removeItem('neotesis_user');
+            authToken = null;
+            currentUser = null;
+            isLoggedIn = false;
         }
+    }
+}
+
+/**
+ * Verificar token con el servidor
+ */
+async function verifyAuthToken() {
+    try {
+        const headers = {};
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        
+        const response = await fetch('/api/v4/user', {
+            method: 'GET',
+            headers: headers
+        });
+        
+        const data = await response.json();
+        
+        if (data.authenticated && data.user) {
+            // Actualizar datos del usuario desde el servidor
+            currentUser = data.user;
+            localStorage.setItem('neotesis_user', JSON.stringify(currentUser));
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('[Auth] Error verifying token:', error);
+        return false;
     }
 }
 
@@ -1954,9 +2005,10 @@ function updateChatAuthUI() {
 }
 
 // Inicializar auth al cargar
-document.addEventListener('DOMContentLoaded', () => {
-    initAuth();
+document.addEventListener('DOMContentLoaded', async () => {
+    await initAuth();
     updateQuotaUI();
+    resetSessionTimer();
     resetSessionTimer();
     
     // Monitorear actividad del usuario
