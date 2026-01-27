@@ -579,21 +579,32 @@ app.get('/api/v4/user', (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    console.log('📝 Register attempt:', { email, hasPassword: !!password });
+    
     if (!email || !password) {
+      console.log('❌ Missing fields');
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    console.log('✅ Creating user in DB...');
     const user = await User.create({ email, password_hash: hashedPassword });
+    console.log('✅ User created:', user.id);
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({ message: 'Usuario registrado', token, user: { id: user.id, email: user.email } });
   } catch (error) {
+    console.error('❌ Register error:', error.message);
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'El email ya está registrado' });
     }
-    res.status(500).json({ error: 'Error al registrar usuario' });
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(500).json({ error: 'Error de base de datos: ' + error.message });
+    }
+    res.status(500).json({ error: 'Error al registrar usuario: ' + error.message });
   }
 });
 

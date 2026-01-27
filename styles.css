@@ -522,9 +522,7 @@ main {
     display: grid;
     grid-template-columns: 280px 1fr 1fr;
     gap: 0;
-    min-height: calc(100vh - 280px);
-    max-height: calc(100vh - 80px);
-    height: auto;
+    height: 750px;
     background: var(--white);
     border-radius: 24px;
     overflow: hidden;
@@ -540,8 +538,6 @@ main {
     flex-direction: column;
     min-width: 220px;
     max-width: 320px;
-    height: 100%;
-    overflow: hidden;
 }
 
 .sidebar-header {
@@ -1205,8 +1201,7 @@ footer p {
     /* 3-Column Layout Responsive */
     .three-column-layout {
         grid-template-columns: 240px 1fr 1fr;
-        min-height: 600px;
-        max-height: calc(100vh - 100px);
+        height: 650px;
     }
 
     .chat-history-sidebar {
@@ -1220,14 +1215,12 @@ footer p {
     .three-column-layout {
         grid-template-columns: 220px 1fr;
         height: auto;
-        min-height: 500px;
     }
 
     .chat-history-sidebar {
         min-width: 180px;
         max-width: 220px;
-        height: auto;
-        max-height: 300px;
+        max-height: 400px;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
@@ -1238,7 +1231,6 @@ footer p {
 
     .pdf-viewer-panel {
         height: 500px;
-        min-height: 400px;
         border-top: 1px solid var(--border);
     }
 }
@@ -1298,30 +1290,27 @@ footer p {
     .three-column-layout {
         grid-template-columns: 1fr;
         height: auto;
-        min-height: 600px;
     }
 
     .chat-history-sidebar {
         max-width: 100%;
-        max-height: 250px;
-        min-height: 150px;
+        max-height: 300px;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
 
     .chat-panel-main {
-        min-height: 400px;
+        height: 450px;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
 
     .pdf-viewer-panel {
         height: 400px;
-        min-height: 350px;
     }
 
     .messages {
-        min-height: 280px;
+        height: 320px;
     }
 
     /* --- Responsive Fixes for Tools --- */
@@ -1810,11 +1799,8 @@ footer p {
     background: var(--bg-light);
     border-bottom: 1px solid var(--border);
     padding: 1rem;
-    flex: 1;
-    min-height: 0;
+    max-height: 200px;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
 }
 
 .chat-list-header {
