@@ -1,35 +1,109 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const path = require('path');
+const cors = require('cors');
+
+// Importar módulos de seguridad
+const { SECURITY_CONFIG } = require('./config/security.config');
+const { helmetConfig, additionalSecurityHeaders } = require('./middleware/security');
+const {
+  generalLimiter,
+  strictLimiter,
+  proxyLimiter,
+  speedLimiter,
+  blacklistMiddleware,
+  attackDetectionMiddleware
+} = require('./middleware/rateLimiter');
+const {
+  chatValidationRules,
+  proxyValidationRules,
+  handleValidationErrors,
+  sanitizeInput
+} = require('./middleware/validator');
+const { sanitizeMiddleware } = require('./middleware/sanitizer');
+const { securityLogger, requestLogger } = require('./utils/logger');
+const { alertPresets } = require('./utils/alerting');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = SECURITY_CONFIG.PORT;
 
-// Middleware
-app.use(express.json({ limit: '10mb' }));
+// ============================================================================
+// CONFIGURACIÓN DE SEGURIDAD - MIDDLEWARE
+// ============================================================================
+
+// Logging de requests (primero para capturar todo)
+app.use(requestLogger);
+
+// Headers de seguridad con Helmet
+app.use(helmetConfig);
+app.use(additionalSecurityHeaders);
+
+// Configuración CORS segura
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como mobile apps o curl)
+    if (!origin) return callback(null, true);
+
+    // Verificar dominio permitido
+    if (origin === SECURITY_CONFIG.ALLOWED_ORIGIN) {
+      return callback(null, true);
+    }
+
+    // Rechazar otros orígenes
+    securityLogger.unauthorizedAccess(
+      req.headers['x-forwarded-for']?.split(',')[0] || req.ip,
+      req.path,
+      { origin, reason: 'CORS violation' }
+    );
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+
+// Parsing de JSON con límites de seguridad
+app.use(express.json({
+  limit: SECURITY_CONFIG.PAYLOAD.MAX_SIZE
+}));
+
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname)));
 
-// CORS middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
+// Middleware de blacklist (verificar IPs bloqueadas)
+app.use(blacklistMiddleware);
 
-// Configuración para chat
+// Detección de ataques
+app.use(attackDetectionMiddleware);
+
+// Sanitización general de inputs
+app.use(sanitizeMiddleware);
+
+// Rate limiting general
+app.use(generalLimiter);
+
+// Throttling para prevenir ataques de fuerza bruta
+app.use(speedLimiter);
+
+// ============================================================================
+// CONFIGURACIÓN DE LA APLICACIÓN
+// ============================================================================
+
+// Configuración de Groq API
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const PRIMARY_MODEL = 'llama-3.1-8b-instant';
-const SECONDARY_MODEL = 'llama-3.3-70b-versatile';
-const MAX_CONTEXT_LENGTH = 12000;
-const MAX_REQUESTS_PER_IP = 3;
-const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 horas en ms
+const PRIMARY_MODEL = SECURITY_CONFIG.AI_MODELS.PRIMARY;
+const SECONDARY_MODEL = SECURITY_CONFIG.AI_MODELS.SECONDARY;
+const MAX_CONTEXT_LENGTH = SECURITY_CONFIG.VALIDATION.PDF_MAX_CONTEXT_LENGTH;
 
-// Almacenamiento en memoria para rate limiting
+// Rate limiting legacy (reemplazado por middleware avanzado)
+// Mantener compatibilidad con código existente
+const MAX_REQUESTS_PER_IP = SECURITY_CONFIG.QUOTAS.MAX_REQUESTS_PER_DAY;
+const RATE_LIMIT_WINDOW = SECURITY_CONFIG.QUOTAS.QUOTA_RESET_TIME_MS;
+
+// Almacenamiento legacy para cuotas de usuario (frontend)
+// El rate limiting avanzado está en middleware/rateLimiter.js
 const requestLog = new Map();
 
 /**
@@ -95,99 +169,44 @@ function checkRateLimit(ip) {
   };
 }
 
-/**
- * Valida el input del usuario
- */
-function validateChatInput(body) {
-  if (!body.messages || !Array.isArray(body.messages)) {
-    return {
-      valid: false,
-      error: 'El campo "messages" es requerido y debe ser un array'
-    };
-  }
 
-  if (body.messages.length === 0) {
-    return {
-      valid: false,
-      error: 'El array de mensajes no puede estar vacío'
-    };
-  }
+// ============================================================================
+// API ROUTES CON SEGURIDAD
+// ============================================================================
 
-  for (const msg of body.messages) {
-    if (!msg.role || !msg.content) {
-      return {
-        valid: false,
-        error: 'Cada mensaje debe tener "role" y "content"'
-      };
-    }
-    if (!['user', 'assistant', 'system'].includes(msg.role)) {
-      return {
-        valid: false,
-        error: 'El role debe ser "user", "assistant" o "system"'
-      };
-    }
-  }
+// Chat API route con validación y rate limiting estricto
+app.post('/api/chat',
+  strictLimiter, // Rate limiting estricto para chat
+  chatValidationRules, // Validación de inputs
+  handleValidationErrors, // Manejo de errores de validación
+  async (req, res) => {
+  const startTime = Date.now();
+  const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+    req.headers['client-ip'] ||
+    req.ip ||
+    'unknown';
 
-  const pdfContext = body.pdfContext || '';
-  if (pdfContext.length > MAX_CONTEXT_LENGTH) {
-    return {
-      valid: false,
-      error: `El contexto PDF excede el límite de ${MAX_CONTEXT_LENGTH} caracteres`
-    };
-  }
-
-  return { valid: true };
-}
-
-// Chat API route
-app.post('/api/chat', async (req, res) => {
   try {
+    securityLogger.info('Chat request started', {
+      ip: clientIP,
+      userAgent: req.headers['user-agent'],
+      messageCount: req.body.messages?.length
+    });
+
     const body = req.body;
 
-    const validation = validateChatInput(body);
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
-
-    const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-      req.headers['client-ip'] ||
-      req.ip ||
-      'unknown';
-
-    let rateLimitStatus = {
-      allowed: true,
-      remaining: MAX_REQUESTS_PER_IP,
-      resetTime: Date.now() + RATE_LIMIT_WINDOW
-    };
-
-    if (process.env.DISABLE_RATE_LIMIT !== 'true') {
-      rateLimitStatus = checkRateLimit(clientIP);
-
-      if (!rateLimitStatus.allowed) {
-      const resetDate = new Date(rateLimitStatus.resetTime);
-      res.set({
-        'X-RateLimit-Limit': MAX_REQUESTS_PER_IP.toString(),
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': rateLimitStatus.resetTime.toString(),
-        'Retry-After': Math.ceil((rateLimitStatus.resetTime - Date.now()) / 1000).toString()
-      });
-      return res.status(429).json({
-        error: 'Has excedido el límite de consultas diarias',
-        limit: MAX_REQUESTS_PER_IP,
-        resetTime: resetDate.toISOString(),
-        message: 'El servicio se restablecerá en las próximas 24 horas desde tu primera consulta'
-      });
-    }
-    }
-
-    const apiKey = process.env.GROQ_API_KEY;
+    // Validar API key (ya validada en config, pero double-check)
+    const apiKey = SECURITY_CONFIG.GROQ_API_KEY;
     if (!apiKey) {
-      console.error('GROQ_API_KEY no está configurada en las variables de entorno');
+      securityLogger.error('GROQ_API_KEY missing', {}, {
+        ip: clientIP,
+        endpoint: '/api/chat'
+      });
+      alertPresets.apiError('/api/chat', new Error('GROQ_API_KEY not configured'));
       return res.status(500).json({
         error: 'Error de configuración del servidor. Contacta al administrador.'
       });
     }
-    console.log('GROQ_API_KEY encontrada, longitud:', apiKey.length);
 
     const messages = [];
 
@@ -240,20 +259,43 @@ ${body.pdfContext}`
       });
     }
 
-    console.log('Enviando solicitud a Groq API con', messages.length, 'mensajes');
+    securityLogger.info('Sending request to Groq API', {
+      ip: clientIP,
+      messageCount: messages.length,
+      model: PRIMARY_MODEL
+    });
+
     let groqResponse = await tryGroqAPI(PRIMARY_MODEL);
-    console.log('Respuesta de Groq API (primary) status:', groqResponse.status);
+    securityLogger.info('Groq API response (primary)', {
+      ip: clientIP,
+      status: groqResponse.status,
+      model: PRIMARY_MODEL
+    });
 
     if (groqResponse.status === 429) {
-      console.log('Modelo primario limitado por tasa, intentando modelo secundario');
+      securityLogger.warn('Primary model rate limited, trying secondary', {
+        ip: clientIP,
+        primaryModel: PRIMARY_MODEL
+      });
       groqResponse = await tryGroqAPI(SECONDARY_MODEL);
-      console.log('Respuesta de Groq API (secondary) status:', groqResponse.status);
+      securityLogger.info('Groq API response (secondary)', {
+        ip: clientIP,
+        status: groqResponse.status,
+        model: SECONDARY_MODEL
+      });
     }
     if (!groqResponse.ok) {
       const errorText = await groqResponse.text();
-      console.error('Error de Groq API:', groqResponse.status, errorText);
+      const error = new Error(`Groq API error: ${groqResponse.status}`);
+
+      securityLogger.apiError('/api/chat', error, {
+        ip: clientIP,
+        status: groqResponse.status,
+        response: errorText.substring(0, 500) // Limitar log
+      });
 
       if (groqResponse.status === 401) {
+        alertPresets.apiError('/api/chat', error);
         return res.status(500).json({
           error: 'Error de autenticación con el servicio de IA. Contacta al administrador.'
         });
@@ -265,6 +307,7 @@ ${body.pdfContext}`
         });
       }
 
+      alertPresets.apiError('/api/chat', error);
       return res.status(500).json({
         error: 'Error al comunicarse con el servicio de IA. Intenta de nuevo.'
       });
@@ -274,58 +317,52 @@ ${body.pdfContext}`
 
     // Verificar que la respuesta tenga la estructura esperada
     if (!groqData.choices || !Array.isArray(groqData.choices) || groqData.choices.length === 0) {
-      console.error('Respuesta de Groq API inválida:', groqData);
+      securityLogger.error('Invalid Groq API response structure', {}, {
+        ip: clientIP,
+        response: JSON.stringify(groqData).substring(0, 500)
+      });
       return res.status(500).json({
         error: 'Respuesta inválida del servicio de IA',
         message: groqData.error || 'La API no devolvió una respuesta válida'
       });
     }
 
+    // Log de éxito y métricas
+    const duration = Date.now() - startTime;
+    securityLogger.successfulRequest('/api/chat', duration, {
+      ip: clientIP,
+      tokensUsed: groqData.usage?.total_tokens || 0
+    });
+
+    // Headers de rate limiting (legacy para compatibilidad)
     res.set({
       'X-RateLimit-Limit': MAX_REQUESTS_PER_IP.toString(),
-      'X-RateLimit-Remaining': rateLimitStatus.remaining.toString(),
-      'X-RateLimit-Reset': rateLimitStatus.resetTime.toString()
+      'X-RateLimit-Remaining': (MAX_REQUESTS_PER_IP - 1).toString(), // Simplificado
+      'X-RateLimit-Reset': (Date.now() + RATE_LIMIT_WINDOW).toString()
     });
 
     res.json(groqData);
 
   } catch (error) {
-    console.error('Error en chat API:', error);
+    const duration = Date.now() - startTime;
+    securityLogger.apiError('/api/chat', error, {
+      ip: clientIP,
+      duration,
+      userAgent: req.headers['user-agent']
+    });
+
+    // No exponer detalles sensibles del error
     res.status(500).json({
       error: 'Error interno del servidor. Intenta de nuevo más tarde.',
-      message: error.message
+      message: process.env.NODE_ENV === 'development' ? error.message : 'Servicio temporalmente no disponible'
     });
   }
 });
 
-// Configuración para proxy
-const REQUEST_TIMEOUT = 10000;
-const MAX_RESPONSE_SIZE = 5 * 1024 * 1024;
-
-const ALLOWED_DOMAINS = [
-  'api.crossref.org',
-  'doi.org',
-  'dx.doi.org',
-  'repositorio.ucv.edu.pe',
-  'repositorio.upao.edu.pe',
-  'repositorio.utp.edu.pe',
-  'repositorio.usil.edu.pe',
-  'repositorio.upc.edu.pe',
-  'repositorio.unmsm.edu.pe',
-  'alicia.concytec.gob.pe',
-  'sciencedirect.com',
-  'www.sciencedirect.com',
-  'scholar.google.com',
-  'pubmed.ncbi.nlm.nih.gov',
-  'arxiv.org',
-  'researchgate.net',
-  'jstor.org',
-  'springer.com',
-  'wiley.com',
-  'elsevier.com',
-  'scielo.org',
-  'redalyc.org'
-];
+// Configuración para proxy (usando configuración centralizada)
+const REQUEST_TIMEOUT = SECURITY_CONFIG.PAYLOAD.REQUEST_TIMEOUT_MS;
+const MAX_RESPONSE_SIZE = SECURITY_CONFIG.PAYLOAD.MAX_RESPONSE_SIZE;
+const ALLOWED_DOMAINS = SECURITY_CONFIG.PROXY.ALLOWED_DOMAINS;
 
 function isAllowedDomain(url) {
   try {
@@ -351,30 +388,6 @@ function sanitizeUrl(url) {
   }
 }
 
-function validateProxyInput(body) {
-  if (!body.url || typeof body.url !== 'string') {
-    return {
-      valid: false,
-      error: 'El campo "url" es requerido y debe ser un string'
-    };
-  }
-
-  if (body.url.length > 2048) {
-    return {
-      valid: false,
-      error: 'La URL es demasiado larga'
-    };
-  }
-
-  if (body.type && !['single', 'batch'].includes(body.type)) {
-    return {
-      valid: false,
-      error: 'El campo "type" debe ser "single" o "batch"'
-    };
-  }
-
-  return { valid: true };
-}
 
 async function fetchWithTimeout(url, options = {}, timeout = REQUEST_TIMEOUT) {
   const controller = new AbortController();
@@ -396,24 +409,43 @@ async function fetchWithTimeout(url, options = {}, timeout = REQUEST_TIMEOUT) {
   }
 }
 
-// Proxy API route
-app.post('/api/proxy', async (req, res) => {
-  try {
-    const body = req.body;
+// Proxy API route con validación y rate limiting
+app.post('/api/proxy',
+  proxyLimiter, // Rate limiting específico para proxy
+  proxyValidationRules, // Validación de URLs
+  handleValidationErrors, // Manejo de errores de validación
+  async (req, res) => {
+  const startTime = Date.now();
+  const clientIP = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+    req.headers['client-ip'] ||
+    req.ip ||
+    'unknown';
 
-    const validation = validateProxyInput(body);
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
+  try {
+    securityLogger.info('Proxy request started', {
+      ip: clientIP,
+      url: req.body.url?.substring(0, 100), // Log solo el inicio de la URL
+      userAgent: req.headers['user-agent']
+    });
+
+    const body = req.body;
 
     let sanitizedUrl;
     try {
       sanitizedUrl = sanitizeUrl(body.url);
     } catch (e) {
+      securityLogger.validationFailed('/api/proxy', ['Invalid URL format'], {
+        ip: clientIP,
+        url: body.url?.substring(0, 100)
+      });
       return res.status(400).json({ error: e.message });
     }
 
     if (!isAllowedDomain(sanitizedUrl)) {
+      securityLogger.unauthorizedAccess(clientIP, '/api/proxy', {
+        reason: 'Domain not allowed',
+        url: sanitizedUrl
+      });
       return res.status(403).json({
         error: 'Dominio no permitido',
         message: 'Solo se permiten solicitudes a repositorios académicos y bases de datos científicas autorizadas'
@@ -421,16 +453,16 @@ app.post('/api/proxy', async (req, res) => {
     }
 
     const response = await fetchWithTimeout(sanitizedUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NeotesisBot/1.0; +https://neotesis-peru.up.railway.app; Academic Citation Tool)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml,application/json;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate',
-        'Cache-Control': 'no-cache'
-      }
+      headers: SECURITY_CONFIG.PROXY.HEADERS
     });
 
     if (!response.ok) {
+      securityLogger.warn('Proxy request failed', {
+        ip: clientIP,
+        url: sanitizedUrl,
+        status: response.status
+      });
+
       if (response.status === 404) {
         return res.status(404).json({
           error: 'Recurso no encontrado',
@@ -481,6 +513,14 @@ app.post('/api/proxy', async (req, res) => {
       };
     }
 
+    // Log de éxito
+    const duration = Date.now() - startTime;
+    securityLogger.successfulRequest('/api/proxy', duration, {
+      ip: clientIP,
+      url: sanitizedUrl,
+      size: text.length
+    });
+
     res.set('Cache-Control', 'public, max-age=3600');
     res.json({
       success: true,
@@ -491,7 +531,12 @@ app.post('/api/proxy', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en proxy API:', error);
+    const duration = Date.now() - startTime;
+    securityLogger.apiError('/api/proxy', error, {
+      ip: clientIP,
+      url: sanitizedUrl,
+      duration
+    });
 
     if (error.message.includes('Timeout')) {
       return res.status(504).json({
@@ -522,7 +567,37 @@ app.get('/api/v4/user', (req, res) => {
   });
 });
 
-// Start server
+/**
+ * INICIO DEL SERVIDOR CON LOGGING DE SEGURIDAD
+ */
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  securityLogger.info('Server started', {
+    port: PORT,
+    environment: SECURITY_CONFIG.NODE_ENV,
+    allowedOrigin: SECURITY_CONFIG.ALLOWED_ORIGIN
+  });
+  console.log(`🚀 Neotesis Perú Server corriendo en puerto ${PORT}`);
+  console.log(`🔒 Seguridad activada - Modo: ${SECURITY_CONFIG.NODE_ENV}`);
+  console.log(`🌐 CORS permitido: ${SECURITY_CONFIG.ALLOWED_ORIGIN}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  securityLogger.info('Server shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  securityLogger.info('Server interrupted');
+  process.exit(0);
+});
+
+process.on('uncaughtException', (error) => {
+  securityLogger.error('Uncaught exception', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  securityLogger.error('Unhandled rejection', { reason, promise });
+  process.exit(1);
 });

@@ -1,5 +1,34 @@
 // scripts.js - Motor de Citación y Análisis Neotesis Perú
-// Versión 2.0 - Arquitectura Serverless Segura
+// Versión 2.0 - Arquitectura Serverless Segura con Medidas de Seguridad Frontend
+
+// ============================================================================
+// CONFIGURACIÓN DE SEGURIDAD FRONTEND
+// ============================================================================
+
+// Cargar DOMPurify para sanitización (se carga dinámicamente si no está disponible)
+let DOMPurify = window.DOMPurify || {
+  sanitize: (html) => {
+    // Fallback básico si DOMPurify no está cargado
+    const temp = document.createElement('div');
+    temp.textContent = html;
+    return temp.innerHTML;
+  }
+};
+
+// Configuración de sanitización
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'blockquote', 'span'],
+  ALLOWED_ATTR: ['class', 'id'],
+  ALLOW_DATA_ATTR: false
+};
+
+// Token CSRF para protección contra ataques
+let csrfToken = null;
+
+// Timeout de sesión (30 minutos)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
+let sessionTimer = null;
+let lastActivity = Date.now();
 
 // ============================================================================
 // CONFIGURACIÓN GLOBAL
@@ -15,6 +44,198 @@ let pdfText = "";
 let pdfContextForAI = ""; // Contexto con marcadores por página para referencias
 let history = [];
 let quotaInterval = null;
+
+// ============================================================================
+// FUNCIONES DE SEGURIDAD FRONTEND
+// ============================================================================
+
+/**
+ * Sanitiza contenido HTML para prevenir XSS
+ */
+function sanitizeHTML(html) {
+  if (typeof html !== 'string') return html;
+  return DOMPurify.sanitize(html, SANITIZE_CONFIG);
+}
+
+/**
+ * Sanitiza entrada de texto plano
+ */
+function sanitizeText(text) {
+  if (typeof text !== 'string') return text;
+  // Remover caracteres potencialmente peligrosos
+  return text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .trim();
+}
+
+/**
+ * Valida entrada de formulario
+ */
+function validateFormInput(input, rules) {
+  const value = input.value.trim();
+  const errors = [];
+
+  if (rules.required && !value) {
+    errors.push('Este campo es obligatorio');
+  }
+
+  if (rules.minLength && value.length < rules.minLength) {
+    errors.push(`Mínimo ${rules.minLength} caracteres`);
+  }
+
+  if (rules.maxLength && value.length > rules.maxLength) {
+    errors.push(`Máximo ${rules.maxLength} caracteres`);
+  }
+
+  if (rules.pattern && !rules.pattern.test(value)) {
+    errors.push(rules.patternMessage || 'Formato inválido');
+  }
+
+  return errors;
+}
+
+/**
+ * Obtiene token CSRF (simulado - en producción vendría del servidor)
+ */
+function getCSRFToken() {
+  if (!csrfToken) {
+    csrfToken = generateSecureToken();
+  }
+  return csrfToken;
+}
+
+/**
+ * Genera token seguro aleatorio
+ */
+function generateSecureToken() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Actualiza actividad del usuario para timeout de sesión
+ */
+function updateActivity() {
+  lastActivity = Date.now();
+  resetSessionTimer();
+}
+
+/**
+ * Reinicia el timer de sesión
+ */
+function resetSessionTimer() {
+  if (sessionTimer) {
+    clearTimeout(sessionTimer);
+  }
+
+  sessionTimer = setTimeout(() => {
+    if (Date.now() - lastActivity > SESSION_TIMEOUT) {
+      handleSessionTimeout();
+    }
+  }, SESSION_TIMEOUT);
+}
+
+/**
+ * Maneja timeout de sesión
+ */
+function handleSessionTimeout() {
+  alert('Tu sesión ha expirado por inactividad. La página se recargará.');
+  // Limpiar datos sensibles
+  localStorage.removeItem('neotesis_quota');
+  history = [];
+  pdfText = '';
+  pdfContextForAI = '';
+  // Recargar página
+  window.location.reload();
+}
+
+/**
+ * Valida mensaje de chat antes de enviar
+ */
+function validateChatMessage(message) {
+  if (!message || typeof message !== 'string') {
+    return { valid: false, error: 'Mensaje inválido' };
+  }
+
+  const trimmed = message.trim();
+  if (trimmed.length === 0) {
+    return { valid: false, error: 'El mensaje no puede estar vacío' };
+  }
+
+  if (trimmed.length > 10000) {
+    return { valid: false, error: 'El mensaje es demasiado largo (máximo 10000 caracteres)' };
+  }
+
+  // Verificar caracteres peligrosos
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+=/i,
+    /<iframe/i,
+    /<object/i,
+    /<embed/i
+  ];
+
+  if (dangerousPatterns.some(pattern => pattern.test(trimmed))) {
+    return { valid: false, error: 'El mensaje contiene contenido no permitido' };
+  }
+
+  return { valid: true, sanitized: sanitizeText(trimmed) };
+}
+
+/**
+ * Envía solicitud segura con validación
+ */
+async function secureFetch(url, options = {}) {
+  // Agregar token CSRF si es POST
+  if (options.method === 'POST' && options.body) {
+    const data = JSON.parse(options.body);
+    data.csrfToken = getCSRFToken();
+    options.body = JSON.stringify(data);
+  }
+
+  // Agregar headers de seguridad
+  options.headers = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...options.headers
+  };
+
+  try {
+    const response = await fetch(url, options);
+
+    // Verificar respuesta
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Demasiadas solicitudes. Intenta de nuevo más tarde.');
+      }
+      if (response.status === 403) {
+        throw new Error('Acceso denegado. Verifica tus permisos.');
+      }
+      throw new Error(`Error del servidor: ${response.status}`);
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Secure fetch error:', error);
+    throw error;
+  }
+}
+
+// Inicializar seguridad al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  updateQuotaUI();
+  resetSessionTimer();
+
+  // Monitorear actividad del usuario
+  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, updateActivity, true);
+  });
+});
 
 // ============================================================================
 // NAVEGACIÓN Y UI GENERAL
@@ -65,15 +286,42 @@ function toggleApaFields() {
 }
 
 function generateAPA() {
-    const type = document.getElementById('apaType').value;
-    const author = document.getElementById('apaAuthor').value.trim();
-    const year = document.getElementById('apaYear').value.trim();
-    const title = document.getElementById('apaTitle').value.trim();
+  const type = document.getElementById('apaType').value;
+  const authorInput = document.getElementById('apaAuthor');
+  const yearInput = document.getElementById('apaYear');
+  const titleInput = document.getElementById('apaTitle');
 
-    if (!author || !year || !title) {
-        alert('Por favor completa todos los campos obligatorios.');
-        return;
-    }
+  // Validar campos con reglas de seguridad
+  const authorErrors = validateFormInput(authorInput, {
+    required: true,
+    minLength: 1,
+    maxLength: 200,
+    pattern: /^[a-zA-ZÀ-ÿ\s.,'-]+$/,
+    patternMessage: 'El nombre del autor contiene caracteres no válidos'
+  });
+
+  const yearErrors = validateFormInput(yearInput, {
+    required: true,
+    pattern: /^\d{4}$/,
+    patternMessage: 'El año debe ser un número de 4 dígitos'
+  });
+
+  const titleErrors = validateFormInput(titleInput, {
+    required: true,
+    minLength: 1,
+    maxLength: 500
+  });
+
+  // Mostrar errores si existen
+  if (authorErrors.length > 0 || yearErrors.length > 0 || titleErrors.length > 0) {
+    const allErrors = [...authorErrors, ...yearErrors, ...titleErrors];
+    alert('Errores de validación:\n' + allErrors.join('\n'));
+    return;
+  }
+
+  const author = sanitizeText(authorInput.value);
+  const year = sanitizeText(yearInput.value);
+  const title = sanitizeText(titleInput.value);
 
     let citation = '';
 
@@ -101,7 +349,7 @@ function generateAPA() {
     }
 
     const resultBox = document.getElementById('apaResult');
-    resultBox.innerHTML = citation;
+    resultBox.innerHTML = sanitizeHTML(citation);
     resultBox.style.display = 'block';
 }
 
@@ -146,19 +394,16 @@ function calculateSample() {
  * @returns {Promise<any>} - Contenido de la respuesta
  */
 async function fetchWithProxy(url, asJson = true) {
-    try {
-        console.log(`Fetching via serverless proxy: ${url}`);
+  try {
+    console.log(`Fetching via secure proxy: ${url}`);
 
-        const response = await fetch('/api/proxy', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                url: url,
-                type: 'single'
-            })
-        });
+    const response = await secureFetch('/api/proxy', {
+      method: 'POST',
+      body: JSON.stringify({
+        url: url,
+        type: 'single'
+      })
+    });
 
         if (!response.ok) {
             const errorData = await response.json();
@@ -398,8 +643,8 @@ function formatCitationFromMetadata(data, identifier) {
 }
 
 function displayCitation(text) {
-    document.getElementById('finalCitationText').innerHTML = text;
-    document.getElementById('urlResult').style.display = 'block';
+  document.getElementById('finalCitationText').innerHTML = sanitizeHTML(text);
+  document.getElementById('urlResult').style.display = 'block';
 }
 
 async function fetchBatchCitations() {
@@ -434,11 +679,11 @@ async function fetchBatchCitations() {
         card.style.marginTop = '0';
         card.style.background = citation.error ? '#fff5f5' : 'white';
         card.innerHTML = `
-            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
-                <span>${url}</span>
-                ${citation.error ? '<span style="color: #e53e3e;">Error</span>' : '<span style="color: #38a169;">Éxito</span>'}
-            </div>
-            <div class="citation-text">${citation.text}</div>
+          <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+            <span>${sanitizeText(url)}</span>
+            ${citation.error ? '<span style="color: #e53e3e;">Error</span>' : '<span style="color: #38a169;">Éxito</span>'}
+          </div>
+          <div class="citation-text">${citation.error ? sanitizeText(citation.text) : sanitizeHTML(citation.text)}</div>
         `;
         batchList.appendChild(card);
 
@@ -878,40 +1123,48 @@ function highlightPdfReference(pageNum, textSnippet = "") {
 // ============================================================================
 
 async function sendMessage() {
-    const data = getQuotaData();
-    if (!DISABLE_QUOTA && (data.count >= MAX_QUOTA || data.tokens >= MAX_TOKENS)) {
-        updateQuotaUI();
-        return;
-    }
+  const data = getQuotaData();
+  if (!DISABLE_QUOTA && (data.count >= MAX_QUOTA || data.tokens >= MAX_TOKENS)) {
+    updateQuotaUI();
+    return;
+  }
 
-    const msg = document.getElementById('userInput').value;
-    if (!msg) return;
-    document.getElementById('userInput').value = "";
-    const chat = document.getElementById('chatMessages');
-    chat.innerHTML += `
-        <div class="msg user">
-            <div class="ai-avatar">
-                <i class="fas fa-user"></i>
-            </div>
-            <div class="msg-content">
-                <strong>Tú:</strong> ${msg}
-            </div>
-        </div>
-    `;
+  const rawMsg = document.getElementById('userInput').value;
+
+  // Validar mensaje antes de enviar
+  const validation = validateChatMessage(rawMsg);
+  if (!validation.valid) {
+    alert(validation.error);
+    return;
+  }
+
+  const msg = validation.sanitized;
+  document.getElementById('userInput').value = "";
+  const chat = document.getElementById('chatMessages');
+
+  // Sanitizar mensaje para mostrar en UI
+  const safeMsg = sanitizeHTML(msg);
+  chat.innerHTML += `
+    <div class="msg user">
+      <div class="ai-avatar">
+        <i class="fas fa-user"></i>
+      </div>
+      <div class="msg-content">
+        <strong>Tú:</strong> ${safeMsg}
+      </div>
+    </div>
+  `;
     history.push({ role: "user", content: msg });
 
     try {
-        // Llamar a la API
-        const res = await fetch("/api/chat", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                messages: history,
-                pdfContext: (pdfContextForAI && pdfContextForAI.length > 0) ? pdfContextForAI : pdfText
-            })
-        });
+      // Llamar a la API de forma segura
+      const res = await secureFetch("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          messages: history,
+          pdfContext: (pdfContextForAI && pdfContextForAI.length > 0) ? pdfContextForAI : pdfText
+        })
+      });
 
         // Manejar rate limiting del servidor
         if (res.status === 429) {
@@ -943,9 +1196,12 @@ async function sendMessage() {
 
         const responseData = await res.json();
         const rawReply = responseData.choices[0].message.content;
-
-        // 1) Intentar leer referencias explícitas desde la respuesta
-        const parsed = extractReferencesFromReply(rawReply);
+    
+        // Sanitizar respuesta de la IA
+        const sanitizedReply = sanitizeHTML(rawReply);
+    
+        // 1) Intentar leer referencias explícitas desde la respuesta sanitizada
+        const parsed = extractReferencesFromReply(sanitizedReply);
         const reply = parsed.answer;
         const refs = parsed.refs;
 
