@@ -25,7 +25,8 @@ const { securityLogger, requestLogger } = require('./utils/logger');
 const { alertPresets } = require('./utils/alerting');
 const { connectDB } = require('./config/database');
 const { User, Chat, Message } = require('./models');
-const { authMiddleware, JWT_SECRET } = require('./middleware/auth');
+const { authMiddleware, JWT_SECRET, optionalAuth } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -179,8 +180,9 @@ function checkRateLimit(ip) {
 // API ROUTES CON SEGURIDAD
 // ============================================================================
 
-// Chat API route con validación y rate limiting estricto
+// Chat API route con validación, rate limiting estricto Y autenticación REQUERIDA
 app.post('/api/chat',
+  requireAuth, // NEW: requiere autenticación
   strictLimiter, // Rate limiting estricto para chat
   chatValidationRules, // Validación de inputs
   handleValidationErrors, // Manejo de errores de validación
@@ -564,79 +566,31 @@ app.post('/api/proxy',
     }
   });
 
-// Endpoint para información de usuario (sin autenticación)
-app.get('/api/v4/user', (req, res) => {
-  res.status(200).json({
-    authenticated: false,
-    user: null
-  });
+// Endpoint para información de usuario (con autenticación opcional)
+app.get('/api/v4/user', optionalAuth, (req, res) => {
+  if (req.user) {
+    res.json({
+      authenticated: true,
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name,
+        role: req.user.role
+      }
+    });
+  } else {
+    res.json({
+      authenticated: false,
+      user: null
+    });
+  }
 });
 
 // ============================================================================
 // RUTAS DE AUTENTICACIÓN
 // ============================================================================
 
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    console.log('📝 Register attempt:', { email, hasPassword: !!password });
-    
-    if (!email || !password) {
-      console.log('❌ Missing fields');
-      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    console.log('✅ Creating user in DB...');
-    const user = await User.create({ email, password_hash: hashedPassword });
-    console.log('✅ User created:', user.id);
-
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.status(201).json({ message: 'Usuario registrado', token, user: { id: user.id, email: user.email } });
-  } catch (error) {
-    console.error('❌ Register error:', error.message);
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ error: 'El email ya está registrado' });
-    }
-    if (error.name === 'SequelizeDatabaseError') {
-      return res.status(500).json({ error: 'Error de base de datos: ' + error.message });
-    }
-    res.status(500).json({ error: 'Error al registrar usuario: ' + error.message });
-  }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ where: { email } });
-
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-
-    // Update last login
-    user.last_login = new Date();
-    await user.save();
-
-    res.json({ message: 'Login exitoso', token, user: { id: user.id, email: user.email } });
-  } catch (error) {
-    res.status(500).json({ error: 'Error en login' });
-  }
-});
-
-app.get('/api/auth/me', authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findByPk(req.user.id, { attributes: ['id', 'email'] });
-    res.json({ authenticated: true, user });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener usuario' });
-  }
-});
+app.use('/api/auth', authRoutes);
 
 // ============================================================================
 // RUTAS DE CHAT (PROTEGIDAS)
