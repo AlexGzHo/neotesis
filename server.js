@@ -608,7 +608,8 @@ app.get('/api/chats', authMiddleware, async (req, res) => {
     });
     res.json(chats);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener chats' });
+    console.error('Error getting chats:', error);
+    res.status(500).json({ error: 'Error al obtener chats: ' + error.message });
   }
 });
 
@@ -630,7 +631,8 @@ app.post('/api/chats', authMiddleware, async (req, res) => {
 
     res.status(201).json(chat);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear chat' });
+    console.error('Error creating chat:', error);
+    res.status(500).json({ error: 'Error al crear chat: ' + error.message });
   }
 });
 
@@ -668,7 +670,8 @@ app.post('/api/chats/:id/messages', authMiddleware, async (req, res) => {
 
     res.status(201).json(message);
   } catch (error) {
-    res.status(500).json({ error: 'Error al guardar mensaje' });
+    console.error('Error saving message:', error);
+    res.status(500).json({ error: 'Error al guardar mensaje: ' + error.message });
   }
 });
 
