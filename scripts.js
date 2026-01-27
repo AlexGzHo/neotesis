@@ -5,15 +5,8 @@
 // CONFIGURACIÓN DE SEGURIDAD FRONTEND
 // ============================================================================
 
-// Cargar DOMPurify para sanitización (se carga dinámicamente si no está disponible)
-let DOMPurify = window.DOMPurify || {
-  sanitize: (html) => {
-    // Fallback básico si DOMPurify no está cargado
-    const temp = document.createElement('div');
-    temp.textContent = html;
-    return temp.innerHTML;
-  }
-};
+// DOMPurify se carga desde CDN en index.html
+const DOMPurify = window.DOMPurify;
 
 // Configuración de sanitización
 const SANITIZE_CONFIG = {
@@ -776,10 +769,6 @@ function copyToClipboard() {
 // CHAT IA - SISTEMA DE CUOTAS
 // ============================================================================
 
-// Inicializar cuota al cargar
-document.addEventListener('DOMContentLoaded', () => {
-    updateQuotaUI();
-});
 
 function getQuotaData() {
     const data = localStorage.getItem('neotesis_quota');

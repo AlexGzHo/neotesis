@@ -13,6 +13,9 @@
     <!-- Librería para leer PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
+    <!-- Librería para sanitización de HTML -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -20,15 +23,15 @@
 
     <header>
         <div class="nav-container">
-            <div class="logo" onclick="showSection('landing')">
+            <div class="logo" onclick="showSection('landing'); return false;" style="cursor: pointer;">
                 <i class="fas fa-graduation-cap"></i> Neotesis <span>Perú</span>
             </div>
             <nav>
                 <ul>
-                    <li><a onclick="showSection('landing')" class="active">Inicio</a></li>
-                    <li><a onclick="showSection('citation-tools')">Herramientas de Cita</a></li>
-                    <li><a onclick="showSection('sample-calculator')">Muestra</a></li>
-                    <li><a onclick="showSection('ai-chat')">Chat con PDF</a></li>
+                    <li><a href="#" onclick="showSection('landing'); return false;" class="active">Inicio</a></li>
+                    <li><a href="#" onclick="showSection('citation-tools'); return false;">Herramientas de Cita</a></li>
+                    <li><a href="#" onclick="showSection('sample-calculator'); return false;">Muestra</a></li>
+                    <li><a href="#" onclick="showSection('ai-chat'); return false;">Chat con PDF</a></li>
                 </ul>
             </nav>
         </div>
@@ -44,8 +47,8 @@
                     <p>En Neotesis Perú combinamos la mejor asesoría académica con herramientas tecnológicas de última
                         generación para tu tesis.</p>
                     <div style="display: flex; gap: 1rem;">
-                        <a onclick="showSection('ai-chat')" class="btn">Probar Chat PDF</a>
-                        <a onclick="openWhatsApp()" class="btn btn-secondary">Asesoría Personalizada</a>
+                        <a href="#" onclick="showSection('ai-chat'); return false;" class="btn">Probar Chat PDF</a>
+                        <a href="#" onclick="openWhatsApp(); return false;" class="btn btn-secondary">Asesoría Personalizada</a>
                     </div>
                 </div>
                 <div class="hero-image">
@@ -78,21 +81,21 @@
                         <h3>Generador APA 7ma</h3>
                         <p>Cita tus fuentes en segundos con total precisión. Olvídate de los errores manuales en tus
                             referencias bibliográficas.</p>
-                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('manual')">Usar Generador</button>
+                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('manual'); return false;">Usar Generador</button>
                     </div>
                     <div class="tool-card">
                         <i class="fas fa-magic"></i>
                         <h3>Auto-Cita URL/DOI</h3>
                         <p>Genera citas bibliográficas pegando solo el enlace o el DOI. Detecta automáticamente si es
                             una web o artículo científico.</p>
-                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('single')">Probar Auto-Cita</button>
+                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('single'); return false;">Probar Auto-Cita</button>
                     </div>
                     <div class="tool-card">
                         <i class="fas fa-layer-group"></i>
                         <h3>Cita en Lote</h3>
                         <p>Procesa hasta 20 URLs o DOIs de forma simultánea. Ideal para generar bibliografías completas
                             en segundos.</p>
-                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('batch')">Ir a Cita en Lote</button>
+                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('batch'); return false;">Ir a Cita en Lote</button>
                     </div>
                     <div class="tool-card">
                         <i class="fas fa-calculator"></i>
