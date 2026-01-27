@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
@@ -506,6 +506,14 @@ app.post('/api/proxy', async (req, res) => {
       message: error.message
     });
   }
+});
+
+// Endpoint para información de usuario (sin autenticación)
+app.get('/api/v4/user', (req, res) => {
+  res.status(200).json({
+    authenticated: false,
+    user: null
+  });
 });
 
 // Start server
