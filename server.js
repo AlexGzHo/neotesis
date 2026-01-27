@@ -51,8 +51,8 @@ const corsOptions = {
 
     // Rechazar otros orígenes
     securityLogger.unauthorizedAccess(
-      req.headers['x-forwarded-for']?.split(',')[0] || req.ip,
-      req.path,
+      'unknown',
+      'CORS check',
       { origin, reason: 'CORS violation' }
     );
     return callback(new Error('Not allowed by CORS'));
