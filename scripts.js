@@ -241,6 +241,11 @@ function showSection(sectionId) {
         nav.classList.remove('mobile-open');
     }
 
+    // Cargar chats cuando se muestra la sección de chat
+    if (sectionId === 'ai-chat') {
+        loadChats();
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1782,13 +1787,37 @@ function generateChatTitle(messages) {
  */
 async function createNewChat() {
     if (!isLoggedIn || !authToken) return;
-    
+
     // Resetear estado local
     currentChatId = null;
     pendingUserMessages = [];
     hasAIResponded = false;
     history = [];
-    
+
+    // Limpiar contexto del PDF
+    pdfText = "";
+    pdfContextForAI = "";
+    pdfTextByPage = [];
+    pdfDocument = null;
+    currentPage = 1;
+    totalPages = 0;
+
+    // Limpiar UI del PDF
+    const pdfStatus = document.getElementById('pdfStatus');
+    if (pdfStatus) {
+        pdfStatus.innerHTML = '';
+    }
+
+    const pdfControls = document.getElementById('pdfControls');
+    if (pdfControls) {
+        pdfControls.style.display = 'none';
+    }
+
+    const pdfViewer = document.getElementById('pdfViewer');
+    if (pdfViewer) {
+        pdfViewer.innerHTML = '';
+    }
+
     // Limpiar chat UI
     const chatMessages = document.getElementById('chatMessages');
     chatMessages.innerHTML = `
@@ -1801,10 +1830,10 @@ async function createNewChat() {
             </div>
         </div>
     `;
-    
+
     // Nota: NO creamos el chat en la base de datos todavía
     // Se creará automáticamente cuando la AI responda al primer mensaje
-    
+
     console.log('Listo para nuevo chat. Se guardará cuando la AI responda.');
 }
 
@@ -1836,6 +1865,12 @@ async function loadChatList() {
     
     if (!token) {
         console.log('[Chat] No hay token, no se pueden cargar chats');
+        return;
+    }
+    
+    // Asegurarse de que el DOM esté completamente cargado
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => loadChats());
         return;
     }
     
@@ -1876,19 +1911,32 @@ async function loadChatList() {
         }
         
         const data = await response.json();
-        const chats = data.chats || [];
+        console.log('[Chat] Raw response data:', data);
+        console.log('[Chat] Data type:', typeof data, 'Is Array:', Array.isArray(data));
+        // Handle both formats: { chats: [...] } or [...]
+        const chats = Array.isArray(data) ? data : (data.chats || []);
+        console.log('[Chat] Processed chats:', chats, 'Count:', chats.length);
+        
+        // Verificar elementos del DOM
+        console.log('[Chat] Verificando elementos del DOM...');
+        console.log('[Chat] chatListPanel exists:', chatListPanel !== null);
+        console.log('[Chat] chatList exists:', chatList !== null);
+        console.log('[Chat] chatEmptyState exists:', chatEmptyState !== null);
+        
+        // Verificar visibilidad
+        console.log('[Chat] chatListPanel visibility:', chatListPanel ? window.getComputedStyle(chatListPanel).display : 'n/a');
+        console.log('[Chat] chatEmptyState visibility:', chatEmptyState ? window.getComputedStyle(chatEmptyState).display : 'n/a');
         
         console.log('[Chat] Chats obtenidos:', chats.length);
         
         if (chats.length === 0) {
             console.log('[Chat] No hay chats, mostrando estado vacío');
-            chatListPanel.style.display = 'none';
+            chatListPanel.classList.remove('visible');
             if (chatEmptyState) chatEmptyState.style.display = 'flex';
             return;
         }
         
         console.log('[Chat] Mostrando', chats.length, 'chats en el sidebar');
-        chatListPanel.style.display = 'block';
         if (chatEmptyState) chatEmptyState.style.display = 'none';
         
         chatList.innerHTML = chats.map(chat => {
@@ -1901,7 +1949,7 @@ async function loadChatList() {
                     </div>
                     <div class="chat-item-info">
                         <div class="chat-item-title">${sanitizeText(chat.title)}</div>
-                        <div class="chat-item-date">${date}</div>
+                        <div class="chat-item-date">${formatDate(chat.updated_at || chat.created_at)}</div>
                     </div>
                     <button class="chat-item-delete" onclick="event.stopPropagation(); deleteChat('${chat.id}')" title="Eliminar chat">
                         <i class="fas fa-trash-alt"></i>
@@ -1954,7 +2002,29 @@ async function deleteChat(chatId) {
             history = [];
             pendingUserMessages = [];
             hasAIResponded = false;
-            
+
+            // Limpiar contexto del PDF
+            pdfText = "";
+            pdfContextForAI = "";
+            pdfTextByPage = [];
+            pdfDocument = null;
+
+            // Limpiar UI del PDF
+            const pdfStatus = document.getElementById('pdfStatus');
+            if (pdfStatus) {
+                pdfStatus.innerHTML = '';
+            }
+
+            const pdfControls = document.getElementById('pdfControls');
+            if (pdfControls) {
+                pdfControls.style.display = 'none';
+            }
+
+            const pdfViewer = document.getElementById('pdfViewer');
+            if (pdfViewer) {
+                pdfViewer.innerHTML = '';
+            }
+
             // Limpiar chat UI
             const chatMessages = document.getElementById('chatMessages');
             if (chatMessages) {
@@ -2018,7 +2088,48 @@ async function loadChat(chatId) {
         const data = await response.json();
         const chat = data.chat || data;
         const messages = chat.Messages || [];
-        
+        const pdfContent = chat.pdf_content || null;
+
+        // Actualizar contexto del PDF del chat
+        if (pdfContent) {
+            pdfText = pdfContent;
+            pdfContextForAI = pdfContent;
+
+            // Actualizar UI del PDF
+            const pdfStatus = document.getElementById('pdfStatus');
+            if (pdfStatus) {
+                pdfStatus.innerHTML = '<i class="fas fa-check-circle" style="color: var(--emerald);"></i> PDF cargado desde chat';
+            }
+
+            console.log('[Chat] PDF context loaded from chat:', pdfContent.substring(0, 100) + '...');
+        } else {
+            // Limpiar contexto del PDF si el chat no tiene PDF
+            pdfText = "";
+            pdfContextForAI = "";
+            pdfTextByPage = [];
+            pdfDocument = null;
+
+            // Actualizar UI del PDF
+            const pdfStatus = document.getElementById('pdfStatus');
+            if (pdfStatus) {
+                pdfStatus.innerHTML = '<i class="fas fa-info-circle"></i> Este chat no tiene PDF asociado';
+            }
+
+            // Ocultar controles del PDF
+            const pdfControls = document.getElementById('pdfControls');
+            if (pdfControls) {
+                pdfControls.style.display = 'none';
+            }
+
+            // Limpiar visor del PDF
+            const pdfViewer = document.getElementById('pdfViewer');
+            if (pdfViewer) {
+                pdfViewer.innerHTML = '';
+            }
+
+            console.log('[Chat] No PDF content in chat');
+        }
+
         // Limpiar messages locales
         history = [];
         
@@ -2107,3 +2218,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 });
+
+// Función para formatear fechas
+function formatDate(dateString) {
+    if (!dateString) return 'Fecha desconocida';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+    return date.toLocaleDateString('es-PE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}

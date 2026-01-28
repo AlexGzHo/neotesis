@@ -370,31 +370,42 @@ ${body.pdfContext}`
           if (chatId) {
             // Chat existente - verificar que pertenece al usuario
             chat = await Chat.findOne({
-              where: { 
+              where: {
                 id: chatId,
-                user_id: req.user.id 
+                user_id: req.user.id
               }
             });
-            
+
             if (!chat) {
               securityLogger.warn('Chat not found or unauthorized', {
                 chatId,
                 userId: req.user.id,
                 ip: clientIP
               });
+            } else {
+              // Actualizar pdf_content si se proporciona uno nuevo
+              if (body.pdfContext !== undefined) {
+                await chat.update({ pdf_content: body.pdfContext });
+                securityLogger.info('Chat PDF content updated', {
+                  chatId,
+                  userId: req.user.id,
+                  hasPdf: !!body.pdfContext
+                });
+              }
             }
           } else {
             // Crear nuevo chat
             chat = await Chat.create({
               user_id: req.user.id,
               title: generateChatTitle(body.messages?.[0]?.content),
-              created_at: new Date(),
-              updated_at: new Date()
+              pdf_content: body.pdfContext || null,
+              // createdAt/updatedAt are managed automatically by Sequelize timestamps
             });
-            
+
             securityLogger.info('New chat created', {
               chatId: chat.id,
-              userId: req.user.id
+              userId: req.user.id,
+              hasPdf: !!body.pdfContext
             });
           }
 
@@ -404,8 +415,7 @@ ${body.pdfContext}`
             await Message.create({
               chat_id: chat.id,
               role: 'user',
-              content: body.messages[body.messages.length - 1]?.content,
-              created_at: new Date()
+              content: body.messages[body.messages.length - 1]?.content
             });
 
             // Guardar respuesta de la IA
@@ -413,12 +423,11 @@ ${body.pdfContext}`
               chat_id: chat.id,
               role: 'assistant',
               content: groqData.choices[0].message.content,
-              tokens_used: groqData.usage?.total_tokens || 0,
-              created_at: new Date()
+              tokens_used: groqData.usage?.total_tokens || 0
             });
 
             // Actualizar timestamp del chat
-            await chat.update({ updated_at: new Date() });
+            await chat.update({ updatedAt: new Date() });
             
             savedChatId = chat.id;
             securityLogger.info('Messages saved', {
@@ -722,9 +731,10 @@ app.get('/api/chats', authMiddleware, async (req, res) => {
     
     const chats = await Chat.findAll({
       where: { user_id: req.user.id || req.user.userId },
-      order: [['updated_at', 'DESC']],
+      // Sequelize default timestamp field is updatedAt (not updated_at)
+      order: [['updatedAt', 'DESC']],
       limit: 50,
-      attributes: ['id', 'title', 'updated_at']
+      attributes: ['id', 'title', 'updatedAt', 'pdf_content']
     });
     res.json({ chats });
   } catch (error) {
@@ -749,17 +759,14 @@ app.post('/api/chats', authMiddleware, async (req, res) => {
     const { title, initialMessage } = req.body;
     const chat = await Chat.create({
       user_id: req.user.id || req.user.userId,
-      title: title || 'Nuevo Chat',
-      created_at: new Date(),
-      updated_at: new Date()
+      title: title || 'Nuevo Chat'
     });
 
     if (initialMessage) {
       await Message.create({
         chat_id: chat.id,
         role: 'user',
-        content: initialMessage,
-        created_at: new Date()
+        content: initialMessage
       });
     }
 
@@ -791,7 +798,10 @@ app.get('/api/chats/:id', authMiddleware, async (req, res) => {
     
     const chat = await Chat.findOne({
       where: { id: req.params.id, user_id: req.user.id || req.user.userId },
-      include: [{ model: Message, order: [['created_at', 'ASC']] }]
+      include: [{ model: Message }],
+      // Ensure deterministic ordering of messages
+      order: [[Message, 'createdAt', 'ASC']],
+      attributes: ['id', 'title', 'updatedAt', 'pdf_content']
     });
 
     if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
@@ -827,12 +837,11 @@ app.post('/api/chats/:id/messages', authMiddleware, async (req, res) => {
     const message = await Message.create({
       chat_id: chat.id,
       role,
-      content,
-      created_at: new Date()
+      content
     });
 
     // Update chat timestamp
-    await chat.update({ updated_at: new Date() });
+    await chat.update({ updatedAt: new Date() });
 
     securityLogger.info('Message saved to existing chat', {
       chatId: chat.id,

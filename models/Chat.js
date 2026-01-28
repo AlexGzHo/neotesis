@@ -14,6 +14,11 @@ const Chat = sequelize.define('Chat', {
     title: {
         type: DataTypes.STRING,
         defaultValue: 'Nuevo Chat'
+    },
+    pdf_content: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     timestamps: true,

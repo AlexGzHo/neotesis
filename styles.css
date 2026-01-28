@@ -522,7 +522,8 @@ main {
     display: grid;
     grid-template-columns: 280px 1fr 1fr;
     gap: 0;
-    height: 750px;
+    min-height: 750px;
+    max-height: calc(100vh - 200px);
     background: var(--white);
     border-radius: 24px;
     overflow: hidden;
@@ -538,6 +539,8 @@ main {
     flex-direction: column;
     min-width: 220px;
     max-width: 320px;
+    height: 100%;
+    overflow: hidden;
 }
 
 .sidebar-header {
@@ -600,8 +603,10 @@ main {
     display: none;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0.75rem;
     min-height: 0;
+    max-height: calc(100% - 80px);
 }
 
 .chat-list-panel.visible {
@@ -708,6 +713,7 @@ main {
     border-right: 1px solid var(--border);
     min-width: 0;
     height: 100%;
+    overflow: hidden;
 }
 
 /* --- PDF Viewer Panel --- */
@@ -717,6 +723,7 @@ main {
     background: var(--white);
     min-width: 0;
     height: 100%;
+    overflow: hidden;
 }
 
 .pdf-viewer-panel .pdf-viewer-container {
@@ -992,12 +999,14 @@ main {
     flex: 1;
     padding: 1.5rem;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 1.2rem;
     background: var(--white);
     min-height: 0;
-    overscroll-behavior: contain;
+    max-height: calc(100% - 200px);
+    scroll-behavior: smooth;
     scrollbar-width: thin;
 }
 
@@ -1224,12 +1233,14 @@ footer p {
     /* 3-Column Layout Responsive */
     .three-column-layout {
         grid-template-columns: 240px 1fr 1fr;
-        height: 650px;
+        min-height: 650px;
+        max-height: calc(100vh - 200px);
     }
 
     .chat-history-sidebar {
         min-width: 180px;
         max-width: 240px;
+        height: 100%;
     }
 }
 
@@ -1237,13 +1248,14 @@ footer p {
     /* 2-Column Layout for Tablet */
     .three-column-layout {
         grid-template-columns: 220px 1fr;
-        height: auto;
+        min-height: auto;
+        max-height: calc(100vh - 200px);
     }
 
     .chat-history-sidebar {
         min-width: 180px;
         max-width: 220px;
-        max-height: 400px;
+        height: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
@@ -1253,7 +1265,8 @@ footer p {
     }
 
     .pdf-viewer-panel {
-        height: 500px;
+        min-height: 500px;
+        max-height: calc(100vh - 200px);
         border-top: 1px solid var(--border);
     }
 }
@@ -1312,28 +1325,32 @@ footer p {
     /* Single Column Layout for Mobile */
     .three-column-layout {
         grid-template-columns: 1fr;
-        height: auto;
+        min-height: auto;
+        max-height: calc(100vh - 200px);
     }
 
     .chat-history-sidebar {
         max-width: 100%;
-        max-height: 300px;
+        height: 100%;
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
 
     .chat-panel-main {
-        height: 450px;
+        min-height: 450px;
+        max-height: calc(100vh - 200px);
         border-right: none;
         border-bottom: 1px solid var(--border);
     }
 
     .pdf-viewer-panel {
-        height: 400px;
+        min-height: 400px;
+        max-height: calc(100vh - 200px);
     }
 
     .messages {
-        height: 320px;
+        min-height: 320px;
+        max-height: calc(100vh - 200px);
     }
 
     /* --- Responsive Fixes for Tools --- */

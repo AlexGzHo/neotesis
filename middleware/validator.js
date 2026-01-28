@@ -62,8 +62,20 @@ const chatValidationRules = [
     .trim()
     .isLength({ max: 12000 })
     .withMessage('El contexto PDF no puede exceder 12000 caracteres')
-    .matches(/^[^<>&'"]*$/)
-    .withMessage('El contexto PDF contiene caracteres no permitidos')
+    // PDF text may legitimately include symbols like "< 1 %" from reports.
+    // Block only clearly dangerous HTML/script patterns instead of blocking all '<'/'>' characters.
+    .custom((value) => {
+      if (typeof value !== 'string') return true;
+
+      const dangerousTags = /<\s*(script|iframe|object|embed|svg|link|style)\b/i;
+      const javascriptProto = /javascript\s*:/i;
+      const eventHandlers = /\bon\w+\s*=/i;
+
+      if (dangerousTags.test(value) || javascriptProto.test(value) || eventHandlers.test(value)) {
+        throw new Error('El contexto PDF contiene contenido no permitido');
+      }
+      return true;
+    })
 ];
 
 /**

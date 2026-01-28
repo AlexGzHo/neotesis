@@ -123,6 +123,27 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    // Normalize legacy payloads.
+    // generateToken() signs { userId, email }, but routes often check req.user.id.
+    // Make both available so protected chat routes work reliably.
+    if (decoded && !decoded.id && decoded.userId) decoded.id = decoded.userId;
+    if (decoded && !decoded.userId && decoded.id) decoded.userId = decoded.id;
+
+    // Optional diagnostic logging (never log token)
+    if (process.env.DEBUG_AUTH === 'true') {
+      try {
+        console.info('[AUTH] jwt decoded payload keys:', Object.keys(decoded || {}));
+        console.info('[AUTH] jwt decoded id/userId:', {
+          id: decoded && decoded.id,
+          userId: decoded && decoded.userId,
+          email: decoded && decoded.email
+        });
+      } catch (_) {
+        // ignore logging failures
+      }
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
