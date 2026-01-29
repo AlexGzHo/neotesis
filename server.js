@@ -134,13 +134,13 @@ function generateChatTitle(firstMessage) {
   if (!firstMessage || typeof firstMessage !== 'string') {
     return 'Nuevo Chat';
   }
-  
+
   // Tomar las primeras 50 caracteres y limpiar
   const title = firstMessage
     .substring(0, 50)
     .trim()
     .replace(/\s+/g, ' ');
-  
+
   return title.length < firstMessage.length ? title + '...' : title;
 }
 
@@ -215,7 +215,7 @@ app.post('/api/chat',
 
     // ✅ AGREGAR: Verificar si hay usuario autenticado
     const isAuthenticated = req.user && req.user.id;
-    const chatId = req.body.chatId;
+    const chatId = req.body.chatId || req.body.currentChatId;
 
     try {
       securityLogger.info('Chat request started', {
@@ -244,6 +244,10 @@ app.post('/api/chat',
       const messages = [];
 
       if (body.pdfContext && body.pdfContext.trim().length > 0) {
+        securityLogger.info('Using PDF context for prompt', {
+          chatId: chatId || 'new',
+          contextPreview: body.pdfContext.substring(0, 100).replace(/\n/g, ' ') + '...'
+        });
         messages.push({
           role: 'system',
           content: `-Eres un asistente académico experto que responde ÚNICAMENTE con información extraída del PDF cargado.
@@ -362,11 +366,11 @@ ${body.pdfContext}`
 
       // ✅ AGREGAR: Guardado condicional a base de datos
       let savedChatId = null;
-      
+
       if (isAuthenticated) {
         try {
           let chat;
-          
+
           if (chatId) {
             // Chat existente - verificar que pertenece al usuario
             chat = await Chat.findOne({
@@ -383,13 +387,18 @@ ${body.pdfContext}`
                 ip: clientIP
               });
             } else {
-              // Actualizar pdf_content si se proporciona uno nuevo
+              // Actualizar pdf_content y metadata si se proporciona
               if (body.pdfContext !== undefined) {
-                await chat.update({ pdf_content: body.pdfContext });
-                securityLogger.info('Chat PDF content updated', {
+                await chat.update({
+                  pdf_content: body.pdfContext,
+                  pdf_pages: body.pdf_pages ? JSON.stringify(body.pdf_pages) : chat.pdf_pages,
+                  total_pages: body.total_pages || chat.total_pages
+                });
+                securityLogger.info('Chat PDF content and metadata updated', {
                   chatId,
                   userId: req.user.id,
-                  hasPdf: !!body.pdfContext
+                  hasPdf: !!body.pdfContext,
+                  hasPages: !!body.pdf_pages
                 });
               }
             }
@@ -399,7 +408,8 @@ ${body.pdfContext}`
               user_id: req.user.id,
               title: generateChatTitle(body.messages?.[0]?.content),
               pdf_content: body.pdfContext || null,
-              // createdAt/updatedAt are managed automatically by Sequelize timestamps
+              pdf_pages: body.pdf_pages ? JSON.stringify(body.pdf_pages) : null,
+              total_pages: body.total_pages || null
             });
 
             securityLogger.info('New chat created', {
@@ -428,7 +438,7 @@ ${body.pdfContext}`
 
             // Actualizar timestamp del chat
             await chat.update({ updatedAt: new Date() });
-            
+
             savedChatId = chat.id;
             securityLogger.info('Messages saved', {
               chatId: chat.id,
@@ -723,18 +733,18 @@ app.get('/api/chats', authMiddleware, async (req, res) => {
   try {
     // ✅ Verificar autenticación
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'No autenticado',
         message: 'Debes iniciar sesión para ver tus chats guardados'
       });
     }
-    
+
     const chats = await Chat.findAll({
       where: { user_id: req.user.id || req.user.userId },
       // Sequelize default timestamp field is updatedAt (not updated_at)
       order: [['updatedAt', 'DESC']],
       limit: 50,
-      attributes: ['id', 'title', 'updatedAt', 'pdf_content']
+      attributes: ['id', 'title', 'updatedAt', 'pdf_content', 'total_pages']
     });
     res.json({ chats });
   } catch (error) {
@@ -750,16 +760,19 @@ app.post('/api/chats', authMiddleware, async (req, res) => {
   try {
     // ✅ Verificar autenticación
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'No autenticado',
         message: 'Debes iniciar sesión para guardar chats'
       });
     }
-    
-    const { title, initialMessage } = req.body;
+
+    const { title, initialMessage, pdf_content, pdf_pages, total_pages } = req.body;
     const chat = await Chat.create({
       user_id: req.user.id || req.user.userId,
-      title: title || 'Nuevo Chat'
+      title: title || 'Nuevo Chat',
+      pdf_content: pdf_content || null,
+      pdf_pages: pdf_pages ? JSON.stringify(pdf_pages) : null,
+      total_pages: total_pages || null
     });
 
     if (initialMessage) {
@@ -790,18 +803,18 @@ app.get('/api/chats/:id', authMiddleware, async (req, res) => {
   try {
     // ✅ Verificar autenticación
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'No autenticado',
         message: 'Debes iniciar sesión para ver este chat'
       });
     }
-    
+
     const chat = await Chat.findOne({
       where: { id: req.params.id, user_id: req.user.id || req.user.userId },
       include: [{ model: Message }],
       // Ensure deterministic ordering of messages
       order: [[Message, 'createdAt', 'ASC']],
-      attributes: ['id', 'title', 'updatedAt', 'pdf_content']
+      attributes: ['id', 'title', 'updatedAt', 'pdf_content', 'pdf_pages', 'total_pages']
     });
 
     if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
@@ -821,15 +834,15 @@ app.post('/api/chats/:id/messages', authMiddleware, async (req, res) => {
   try {
     // ✅ Verificar autenticación
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'No autenticado',
         message: 'Debes iniciar sesión para enviar mensajes'
       });
     }
-    
+
     const { role, content } = req.body;
-    const chat = await Chat.findOne({ 
-      where: { id: req.params.id, user_id: req.user.id || req.user.userId } 
+    const chat = await Chat.findOne({
+      where: { id: req.params.id, user_id: req.user.id || req.user.userId }
     });
 
     if (!chat) return res.status(404).json({ error: 'Chat no encontrado' });
@@ -865,14 +878,14 @@ app.delete('/api/chats/:id', authMiddleware, async (req, res) => {
   try {
     // ✅ Verificar autenticación
     if (!req.user || !req.user.id) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'No autenticado',
         message: 'Debes iniciar sesión para eliminar chats'
       });
     }
-    
-    const chat = await Chat.findOne({ 
-      where: { id: req.params.id, user_id: req.user.id || req.user.userId } 
+
+    const chat = await Chat.findOne({
+      where: { id: req.params.id, user_id: req.user.id || req.user.userId }
     });
 
     if (!chat) {

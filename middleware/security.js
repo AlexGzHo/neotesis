@@ -19,6 +19,7 @@ const cspConfig = {
       "'self'",
       "'unsafe-inline'", // Necesario para scripts inline en el frontend
       "https://cdnjs.cloudflare.com", // Para PDF.js y otras librerías
+      "https://cdn.tailwindcss.com", // Para Tailwind CSS CDN
       "https://cdn.jsdelivr.net", // Para posibles dependencias externas
       "https://static.cloudflareinsights.com" // Para Cloudflare beacon
     ],

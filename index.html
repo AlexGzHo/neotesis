@@ -8,124 +8,219 @@
     <!-- Fuentes e Iconos -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <!-- Librería para leer PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        // Configuración de PDF.js Worker
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
+    </script>
 
     <!-- Librería para sanitización de HTML -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
 
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        console.log('Loading Tailwind CSS from CDN...');
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        'primary-light': '#1e293b',
+                        accent: '#2563eb',
+                        'accent-hover': '#1d4ed8',
+                        'accent-glow': 'rgba(37, 99, 235, 0.2)',
+                        emerald: '#10b981',
+                        'bg-light': '#f8fafc',
+                        dark: '#1e293b',
+                        gray: '#64748b',
+                        white: '#ffffff',
+                        glass: 'rgba(255, 255, 255, 0.8)',
+                        border: '#e2e8f0',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glow': '0 10px 15px -3px rgba(37, 99, 235, 0.2)',
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                        'card-hover': '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                        'hero': '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+                        'modal': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                    },
+                }
+            }
+        }
+    </script>
+
     <link rel="stylesheet" href="styles.css">
 </head>
 
-<body>
+<body class="flex flex-col min-h-screen">
 
-    <header>
-        <div class="nav-container">
-            <div class="logo" onclick="showSection('landing'); return false;" style="cursor: pointer;">
-                <i class="fas fa-graduation-cap"></i> Neotesis <span>Perú</span>
+    <header class="bg-glass backdrop-blur-xl border-b border-border sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center relative">
+            <div class="text-2xl font-extrabold text-primary cursor-pointer flex items-center gap-2 tracking-tight"
+                onclick="showSection('landing'); return false;">
+                <i class="fas fa-graduation-cap"></i> Neotesis <span class="text-accent">Perú</span>
             </div>
-            <nav>
-                <button class="hamburger" id="hamburgerBtn" aria-label="Menú">
-                    <i class="fas fa-bars"></i>
+            <nav class="flex items-center">
+                <div id="navOverlay" class="nav-overlay" onclick="toggleMobileMenu()"></div>
+                <button
+                    class="bg-accent hover:bg-accent-hover text-white p-3 rounded-lg transition-all duration-300 ml-auto md:hidden z-[60] flex items-center justify-center shadow-lg"
+                    id="hamburgerBtn" aria-label="Menú">
+                    <span class="material-icons-round">menu</span>
                 </button>
-                <ul>
-                    <li><a href="#" data-section="landing" class="active">Inicio</a></li>
-                    <li><a href="#" data-section="citation-tools">Herramientas de Cita</a></li>
-                    <li><a href="#" data-section="sample-calculator">Muestra</a></li>
-                    <li><a href="#" data-section="ai-chat">Chat con PDF</a></li>
-                    <li id="navAuthItem"><a href="#" onclick="openAuthModal(); return false;" class="auth-link">
-                        <i class="fas fa-user"></i> Iniciar Sesión
-                    </a></li>
+                <ul class="hidden md:flex gap-10 list-none md:items-center">
+                    <li><a href="#" data-section="landing"
+                            class="text-dark font-semibold text-sm transition-all hover:text-accent cursor-pointer relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-accent after:transition-all after:duration-300 hover:after:w-full active:after:w-full hover:text-accent active:text-accent active">Inicio</a>
+                    </li>
+                    <li><a href="#" data-section="citation-tools"
+                            class="text-dark font-semibold text-sm transition-all hover:text-accent cursor-pointer relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-accent after:transition-all after:duration-300 hover:after:w-full active:after:w-full hover:text-accent active:text-accent">Herramientas
+                            de Cita</a></li>
+                    <li><a href="#" data-section="sample-calculator"
+                            class="text-dark font-semibold text-sm transition-all hover:text-accent cursor-pointer relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-accent after:transition-all after:duration-300 hover:after:w-full active:after:w-full hover:text-accent active:text-accent">Muestra</a>
+                    </li>
+                    <li><a href="#" data-section="ai-chat"
+                            class="text-dark font-semibold text-sm transition-all hover:text-accent cursor-pointer relative after:content-[''] after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-accent after:transition-all after:duration-300 hover:after:w-full active:after:w-full hover:text-accent active:text-accent">Chat
+                            con PDF</a></li>
+                    <li id="navAuthItem" class="md:ml-auto">
+                        <a href="#" onclick="openAuthModal(); return false;"
+                            class="bg-accent text-white py-2.5 px-5 rounded-full transition-all duration-300 hover:bg-accent-hover hover:scale-105 border-none cursor-pointer text-base w-fit after:hidden flex items-center gap-2">
+                            <i class="fas fa-user"></i> Iniciar Sesión
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </div>
     </header>
 
-    <main>
+    <main class="flex-1">
         <!-- SECCIÓN 1: LANDING PAGE -->
         <section id="landing" class="page-section active">
             <!-- HERO -->
-            <div class="hero-section">
+            <div class="py-16 px-8 max-w-7xl mx-auto grid lg:grid-cols-2 items-center gap-16">
                 <div class="hero-content">
-                    <h1>Tu éxito académico, potenciado por IA y Expertos.</h1>
-                    <p>En Neotesis Perú combinamos la mejor asesoría académica con herramientas tecnológicas de última
+                    <h1 class="text-[3.5rem] font-extrabold leading-tight text-primary mb-6 tracking-tight">Tu éxito
+                        académico, potenciado por IA y Expertos.</h1>
+                    <p class="text-xl text-gray mb-10 max-w-lg">En Neotesis Perú combinamos la mejor asesoría
+                        académica con herramientas tecnológicas de última
                         generación para tu tesis.</p>
-                    <div style="display: flex; gap: 1rem;">
-                        <a href="#" onclick="showSection('ai-chat'); return false;" class="btn">Probar Chat PDF</a>
-                        <a href="#" onclick="openWhatsApp(); return false;" class="btn btn-secondary">Asesoría Personalizada</a>
+                    <div class="flex gap-4">
+                        <a href="#" onclick="showSection('ai-chat'); return false;"
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit">Probar
+                            Chat PDF</a>
+                        <a href="#" onclick="openWhatsApp(); return false;"
+                            class="bg-gray-100 hover:bg-gray-200 text-primary py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 border-none cursor-pointer text-base w-fit">Asesoría
+                            Personalizada</a>
                     </div>
                 </div>
-                <div class="hero-image">
-                    <img src="hero.png" alt="Estudiante profesional trabajando">
+                <div class="relative hero-image">
+                    <img src="hero.png" alt="Estudiante profesional trabajando" class="w-full rounded-3xl shadow-hero">
                 </div>
             </div>
 
             <!-- TRUST BAR -->
-            <div class="trust-bar">
-                <div class="trust-container">
-                    <h3>Nuestra experiencia avalada en:</h3>
-                    <div class="university-logos">
-                        <div class="uni-logo"><i class="fas fa-university"></i> UNMSM</div>
-                        <div class="uni-logo"><i class="fas fa-university"></i> UCV</div>
-                        <div class="uni-logo"><i class="fas fa-university"></i> USIL</div>
-                        <div class="uni-logo"><i class="fas fa-university"></i> UPC</div>
+            <div class="bg-white py-8 border-t border-b border-border">
+                <div class="max-w-7xl mx-auto text-center">
+                    <h3 class="uppercase text-xs tracking-widest text-gray mb-6">Nuestra experiencia avalada en:
+                    </h3>
+                    <div class="flex flex-wrap justify-center gap-8">
+                        <div class="font-bold text-gray-400 flex items-center gap-2 text-base"><i
+                                class="fas fa-university"></i> UNMSM</div>
+                        <div class="font-bold text-gray-400 flex items-center gap-2 text-base"><i
+                                class="fas fa-university"></i> UCV</div>
+                        <div class="font-bold text-gray-400 flex items-center gap-2 text-base"><i
+                                class="fas fa-university"></i> USIL</div>
+                        <div class="font-bold text-gray-400 flex items-center gap-2 text-base"><i
+                                class="fas fa-university"></i> UPC</div>
                     </div>
                 </div>
             </div>
 
             <!-- NUESTRAS HERRAMIENTAS -->
-            <div class="tools-section">
-                <div class="section-header">
-                    <h2>Herramientas Gratuitas</h2>
+            <div class="py-16 px-8 max-w-7xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-4xl text-primary mb-4">Herramientas Gratuitas</h2>
                     <p>Diseñadas para facilitar cada etapa de tu investigación.</p>
                 </div>
-                <div class="tools-grid">
-                    <div class="tool-card">
-                        <i class="fas fa-quote-right"></i>
-                        <h3>Generador APA 7ma</h3>
-                        <p>Cita tus fuentes en segundos con total precisión. Olvídate de los errores manuales en tus
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div
+                        class="bg-white p-12 rounded-3xl shadow-card transition-all duration-300 border border-border flex flex-col gap-6 hover:-translate-y-2.5 hover:shadow-card-hover hover:border-accent">
+                        <i class="fas fa-quote-right text-4xl text-accent"></i>
+                        <h3 class="text-2xl text-primary font-semibold">Generador APA 7ma</h3>
+                        <p class="text-gray">Cita tus fuentes en segundos con total precisión. Olvídate de los
+                            errores manuales en tus
                             referencias bibliográficas.</p>
-                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('manual'); return false;">Usar Generador</button>
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit"
+                            onclick="showSection('citation-tools'); switchCitationTool('manual'); return false;">Usar
+                            Generador</button>
                     </div>
-                    <div class="tool-card">
-                        <i class="fas fa-magic"></i>
-                        <h3>Auto-Cita URL/DOI</h3>
-                        <p>Genera citas bibliográficas pegando solo el enlace o el DOI. Detecta automáticamente si es
+                    <div
+                        class="bg-white p-12 rounded-3xl shadow-card transition-all duration-300 border border-border flex flex-col gap-6 hover:-translate-y-2.5 hover:shadow-card-hover hover:border-accent">
+                        <i class="fas fa-magic text-4xl text-accent"></i>
+                        <h3 class="text-2xl text-primary font-semibold">Auto-Cita URL/DOI</h3>
+                        <p class="text-gray">Genera citas bibliográficas pegando solo el enlace o el DOI. Detecta
+                            automáticamente si es
                             una web o artículo científico.</p>
-                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('single'); return false;">Probar Auto-Cita</button>
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit"
+                            onclick="showSection('citation-tools'); switchCitationTool('single'); return false;">Probar
+                            Auto-Cita</button>
                     </div>
-                    <div class="tool-card">
-                        <i class="fas fa-layer-group"></i>
-                        <h3>Cita en Lote</h3>
-                        <p>Procesa hasta 20 URLs o DOIs de forma simultánea. Ideal para generar bibliografías completas
+                    <div
+                        class="bg-white p-12 rounded-3xl shadow-card transition-all duration-300 border border-border flex flex-col gap-6 hover:-translate-y-2.5 hover:shadow-card-hover hover:border-accent">
+                        <i class="fas fa-layer-group text-4xl text-accent"></i>
+                        <h3 class="text-2xl text-primary font-semibold">Cita en Lote</h3>
+                        <p class="text-gray">Procesa hasta 20 URLs o DOIs de forma simultánea. Ideal para generar
+                            bibliografías completas
                             en segundos.</p>
-                        <button class="btn" onclick="showSection('citation-tools'); switchCitationTool('batch'); return false;">Ir a Cita en Lote</button>
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit"
+                            onclick="showSection('citation-tools'); switchCitationTool('batch'); return false;">Ir a
+                            Cita en Lote</button>
                     </div>
-                    <div class="tool-card">
-                        <i class="fas fa-calculator"></i>
-                        <h3>Calculadora de Muestra</h3>
-                        <p>Determina el tamaño de muestra ideal para tu investigación cuantitativa. Soporta poblaciones
+                    <div
+                        class="bg-white p-12 rounded-3xl shadow-card transition-all duration-300 border border-border flex flex-col gap-6 hover:-translate-y-2.5 hover:shadow-card-hover hover:border-accent">
+                        <i class="fas fa-calculator text-4xl text-accent"></i>
+                        <h3 class="text-2xl text-primary font-semibold">Calculadora de Muestra</h3>
+                        <p class="text-gray">Determina el tamaño de muestra ideal para tu investigación
+                            cuantitativa. Soporta poblaciones
                             finitas e infinitas.</p>
-                        <button class="btn" onclick="showSection('sample-calculator')">Calcular Muestra</button>
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit"
+                            onclick="showSection('sample-calculator')">Calcular Muestra</button>
                     </div>
-                    <div class="tool-card">
-                        <i class="fas fa-robot"></i>
-                        <h3>Neotesis IA - Chat PDF</h3>
-                        <p>Sube tu PDF y deja que nuestra IA analice el contenido por ti. Responde preguntas, resume y
+                    <div
+                        class="bg-white p-12 rounded-3xl shadow-card transition-all duration-300 border border-border flex flex-col gap-6 hover:-translate-y-2.5 hover:shadow-card-hover hover:border-accent">
+                        <i class="fas fa-robot text-4xl text-accent"></i>
+                        <h3 class="text-2xl text-primary font-semibold">Neotesis IA - Chat PDF</h3>
+                        <p class="text-gray">Sube tu PDF y deja que nuestra IA analice el contenido por ti.
+                            Responde preguntas, resume y
                             localiza información al instante.</p>
-                        <button class="btn" onclick="showSection('ai-chat')">Abrir Chat IA</button>
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit"
+                            onclick="showSection('ai-chat')">Abrir Chat IA</button>
                     </div>
                 </div>
             </div>
 
             <!-- FINAL CTA -->
-            <div style="background: var(--primary); color: white; padding: 6rem 2rem; text-align: center;">
-                <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">¿Necesitas ayuda experta con tu tesis?</h2>
-                <p style="opacity: 0.8; margin-bottom: 2.5rem; font-size: 1.2rem;">Contamos con un equipo de
+            <div class="bg-primary text-white py-24 px-8 text-center">
+                <h2 class="text-4xl mb-6">¿Necesitas ayuda experta con tu tesis?</h2>
+                <p class="opacity-80 mb-10 text-xl">Contamos con un equipo de
                     especialistas listos para guiarte en todo el proceso.</p>
-                <a onclick="openWhatsApp()" class="btn btn-whatsapp">
+                <a onclick="openWhatsApp()"
+                    class="bg-[#25D366] hover:bg-[#1ebc57] text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 border-none cursor-pointer text-base w-fit">
                     <i class="fab fa-whatsapp"></i> Hablar con un Asesor
                 </a>
             </div>
@@ -134,24 +229,32 @@
 
         <!-- SECCIÓN: HERRAMIENTAS DE CITACIÓN -->
         <section id="citation-tools" class="page-section">
-            <div class="container" style="max-width: 900px;">
+            <div class="section-container">
                 <div class="section-header">
-                    <span class="internal-badge" style="margin-bottom: 1rem; display: inline-block;">IA +
-                        Metadatos</span>
-                    <h2>Herramientas de Citación</h2>
-                    <p>Genera citas bibliográficas automáticamente desde URLs, DOIs o procesa múltiples enlaces en lote.</p>
+                    <span
+                        class="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">IA
+                        + Metadatos</span>
+                    <h2 class="text-4xl text-primary mb-4 font-bold">Herramientas de Citación</h2>
+                    <p class="text-gray text-lg max-w-2xl mx-auto">Genera citas bibliográficas automáticamente desde
+                        URLs, DOIs o procesa múltiples enlaces en lote.</p>
                 </div>
 
                 <!-- Tabs para cambiar entre herramientas -->
-                <div class="citation-tabs" style="margin-bottom: 2rem;">
-                    <div class="tab-buttons" style="display: flex; background: var(--border); border-radius: 12px; padding: 0.25rem; margin-bottom: 2rem;">
-                        <button class="tab-btn active" onclick="switchCitationTool('single')" style="flex: 1; padding: 0.75rem 0.5rem; border: none; background: white; color: var(--primary); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 0.85rem;">
+                <div class="mb-8">
+                    <div class="flex bg-border rounded-xl p-1 mb-8">
+                        <button
+                            class="tab-btn flex-1 py-3 px-4 border-0 bg-white text-primary rounded-lg font-semibold cursor-pointer transition-all duration-300 text-sm active"
+                            onclick="switchCitationTool('single')">
                             <i class="fas fa-magic"></i><br>Auto-Cita
                         </button>
-                        <button class="tab-btn" onclick="switchCitationTool('batch')" style="flex: 1; padding: 0.75rem 0.5rem; border: none; background: transparent; color: var(--text-gray); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 0.85rem;">
+                        <button
+                            class="tab-btn flex-1 py-3 px-4 border-0 bg-transparent text-gray rounded-lg font-semibold cursor-pointer transition-all duration-300 text-sm hover:bg-white/50 hover:text-primary"
+                            onclick="switchCitationTool('batch')">
                             <i class="fas fa-layer-group"></i><br>Cita en Lote
                         </button>
-                        <button class="tab-btn" onclick="switchCitationTool('manual')" style="flex: 1; padding: 0.75rem 0.5rem; border: none; background: transparent; color: var(--text-gray); border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 0.85rem;">
+                        <button
+                            class="tab-btn flex-1 py-3 px-4 border-0 bg-transparent text-gray rounded-lg font-semibold cursor-pointer transition-all duration-300 text-sm hover:bg-white/50 hover:text-primary"
+                            onclick="switchCitationTool('manual')">
                             <i class="fas fa-edit"></i><br>Generador APA
                         </button>
                     </div>
@@ -161,160 +264,181 @@
                 <div id="citation-content">
                     <!-- HERRAMIENTA 1: AUTO-CITA INDIVIDUAL -->
                     <div id="single-citation-tool" class="citation-tool active">
-                        <div class="calculator-card">
-                            <div class="search-engine-row">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <div class="input-with-icon">
-                                        <i class="fas fa-link"></i>
-                                        <input type="text" id="webUrl" class="form-control"
+                        <div class="bg-white p-10 rounded-3xl shadow-modal border border-border flex flex-col gap-6">
+                            <div class="grid grid-cols-[1fr_auto] gap-4 items-center">
+                                <div class="mb-0">
+                                    <div class="relative flex items-center">
+                                        <i class="fas fa-link absolute left-4 text-gray text-lg"></i>
+                                        <input type="text" id="webUrl"
+                                            class="w-full p-4 pl-12 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
                                             placeholder="Pega un DOI (ej: 10.1016...) o una URL (https://...)">
                                     </div>
                                 </div>
-                                <button class="btn" onclick="fetchCitation()"
-                                    style="height: 3.5rem; padding: 0 2rem; border-radius: 12px;">
+                                <button
+                                    class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit h-14 px-8 rounded-xl"
+                                    onclick="fetchCitation()">
                                     <i class="fas fa-magic"></i> Generar Cita
                                 </button>
                             </div>
 
                             <!-- Indicador de carga -->
-                            <div id="loadingIndicator"
-                                style="display:none; text-align: center; margin-top: 2rem; color: var(--accent); font-weight: 600;">
+                            <div id="loadingIndicator" class="hidden text-center mt-8 text-accent font-semibold">
                                 <i class="fas fa-spinner fa-spin"></i> Analizando datos en registros académicos...
                             </div>
 
                             <!-- Resultado -->
-                            <div id="urlResult" class="result-box"
-                                style="display:none; text-align: left; margin-top: 2.5rem; background: white; border: 1px solid var(--border); padding: 2rem; border-radius: 16px;">
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                                    <span
-                                        style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--text-gray); letter-spacing: 0.05em;">Cita
+                            <div id="urlResult"
+                                class="hidden text-left mt-10 bg-white border border-border p-8 rounded-xl">
+                                <div class="flex justify-between items-center mb-4 border-b border-border pb-2">
+                                    <span class="text-xs font-extrabold uppercase text-gray tracking-widest">Cita
                                         APA 7ma Generada</span>
                                     <button onclick="copyToClipboard()"
-                                        style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                        class="bg-none border-none text-accent cursor-pointer text-sm font-bold flex items-center gap-2">
                                         <i class="far fa-copy"></i> Copiar
                                     </button>
                                 </div>
-                                <div id="finalCitationText"
-                                    style="font-size: 1rem; line-height: 1.6; color: var(--primary); font-family: 'Inter', sans-serif;">
+                                <div id="finalCitationText" class="text-base leading-relaxed text-primary font-sans">
                                 </div>
                             </div>
                         </div>
 
-                        <div
-                            style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
-                            <p><b>Tip Pro:</b> Los DOIs (Digital Object Identifiers) garantizan la mayor precisión en artículos
+                        <div class="tip-box">
+                            <i class="fas fa-info-circle"></i>
+                            <p><b>Tip Pro:</b> Los DOIs (Digital Object Identifiers) garantizan la mayor precisión en
+                                artículos
                                 científicos. Si usas una URL, intentaremos extraer los metadatos de la página.
                                 <b>¿Tienes muchos enlaces?</b> Cambia a <a onclick="switchCitationTool('batch')"
-                                    style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">Cita en Lote</a>.
+                                    class="text-accent cursor-pointer underline font-bold">Cita en Lote</a>.
                             </p>
                         </div>
                     </div>
 
                     <!-- HERRAMIENTA 2: CITA EN LOTE -->
                     <div id="batch-citation-tool" class="citation-tool">
-                        <div class="calculator-card">
-                            <div class="form-group">
-                                <label>Lista de Enlaces o DOIs (uno por línea)</label>
-                                <textarea id="batchUrls" class="form-control" rows="8"
-                                    style="font-family: monospace; font-size: 0.9rem; padding: 1rem; resize: vertical;"
+                        <div class="bg-white p-10 rounded-3xl shadow-modal border border-border flex flex-col gap-6">
+                            <div class="mb-8">
+                                <label class="block mb-3 font-bold text-primary">Lista de Enlaces o DOIs (uno por
+                                    línea)</label>
+                                <textarea id="batchUrls"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white font-mono text-sm p-4 resize-vertical"
+                                    rows="8"
                                     placeholder="https://repositorio.upao.edu.pe/item/...\n10.1016/j.socscimed...\nhttps://repositorio.ucv.edu.pe/..."></textarea>
                             </div>
 
-                            <button class="btn" onclick="fetchBatchCitations()"
-                                style="width: 100%; height: 3.5rem; margin-top: 1rem;">
+                            <button
+                                class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit w-full h-14 mt-4"
+                                onclick="fetchBatchCitations()">
                                 <i class="fas fa-layer-group"></i> Procesar Todo el Lote
                             </button>
 
                             <!-- Progreso -->
-                            <div id="batchProgress" style="display:none; margin-top: 2rem;">
-                                <div
-                                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600;">
+                            <div id="batchProgress" class="hidden mt-8">
+                                <div class="flex justify-between mb-2 text-sm font-semibold">
                                     <span id="batchStatusText">Procesando...</span>
                                     <span id="batchPercentText">0%</span>
                                 </div>
-                                <div style="height: 8px; background: var(--border); border-radius: 10px; overflow: hidden;">
+                                <div class="h-2 bg-border rounded-full overflow-hidden">
                                     <div id="batchProgressBar"
-                                        style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;">
+                                        class="w-0 h-full bg-accent transition-[width] duration-300">
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Resultados en Lote -->
-                            <div id="batchResultContainer" style="display:none; margin-top: 2.5rem;">
-                                <div
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                                    <h3 style="font-size: 1.1rem; margin: 0;">Referencias Generadas</h3>
-                                    <button onclick="copyAllBatch()" class="btn btn-secondary"
-                                        style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            <div id="batchResultContainer" class="hidden mt-10">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h3 class="text-base m-0">Referencias Generadas</h3>
+                                    <button onclick="copyAllBatch()"
+                                        class="bg-gray-100 hover:bg-gray-200 text-primary py-2 px-4 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 border-none cursor-pointer text-base w-fit py-2 px-4 text-sm">
                                         <i class="far fa-copy"></i> Copiar Todo el Lote
                                     </button>
                                 </div>
-                                <div id="batchList" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div id="batchList" class="flex flex-col gap-4">
                                     <!-- Las citas se insertarán aquí -->
                                 </div>
                             </div>
                         </div>
 
-                        <div
-                            style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
-                            <p><b>Tip Pro:</b> Puedes procesar hasta 20 enlaces simultáneamente. Si tienes pocos enlaces, prueba la <a onclick="switchCitationTool('single')"
-                                style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">Auto-Cita Individual</a> para una experiencia más rápida.
-                            </p>
+                        <div class="tip-box text-left">
+                            <i class="fas fa-info-circle"></i>
+                            <p><b>Tip Pro:</b> Puedes procesar hasta 20 enlaces simultáneamente. Si tienes pocos
+                                enlaces, prueba la <a onclick="switchCitationTool('single')"
+                                    class="text-accent cursor-pointer underline font-bold">Auto-Cita Individual</a> para
+                                mejor feedback visual.</p>
                         </div>
                     </div>
 
                     <!-- HERRAMIENTA 3: GENERADOR APA MANUAL -->
                     <div id="manual-citation-tool" class="citation-tool">
-                        <div class="calculator-card">
-                            <div class="form-group">
-                                <label>Tipo de Fuente</label>
-                                <select id="apaType" class="form-control" onchange="toggleApaFields()">
+                        <div class="bg-white p-10 rounded-3xl shadow-modal border border-border flex flex-col gap-6">
+                            <div class="mb-8">
+                                <label class="block mb-3 font-bold text-primary">Tipo de Fuente</label>
+                                <select id="apaType"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    onchange="toggleApaFields()">
                                     <option value="book">Libro</option>
                                     <option value="journal">Artículo de Revista</option>
                                     <option value="web">Página Web</option>
                                 </select>
                             </div>
 
-                            <div class="form-group">
-                                <label>Apellido(s), Inicial del Nombre (Autor)</label>
-                                <input type="text" id="apaAuthor" class="form-control" placeholder="Ej: Perez, J.">
+                            <div class="mb-8">
+                                <label class="block mb-3 font-bold text-primary">Apellido(s), Inicial del Nombre
+                                    (Autor)</label>
+                                <input type="text" id="apaAuthor"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    placeholder="Ej: Perez, J.">
                             </div>
 
-                            <div class="form-group">
-                                <label>Año de Publicación</label>
-                                <input type="number" id="apaYear" class="form-control" placeholder="Ej: 2023">
+                            <div class="mb-8">
+                                <label class="block mb-3 font-bold text-primary">Año de Publicación</label>
+                                <input type="number" id="apaYear"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    placeholder="Ej: 2023">
                             </div>
 
-                            <div class="form-group">
-                                <label>Título de la obra</label>
-                                <input type="text" id="apaTitle" class="form-control"
+                            <div class="mb-8">
+                                <label class="block mb-3 font-bold text-primary">Título de la obra</label>
+                                <input type="text" id="apaTitle"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
                                     placeholder="Ej: Métodos de investigación">
                             </div>
 
                             <!-- Campos condicionales -->
-                            <div id="fieldPublisher" class="form-group">
-                                <label>Editorial</label>
-                                <input type="text" id="apaPublisher" class="form-control" placeholder="Ej: Pearson">
+                            <div id="fieldPublisher" class="mb-8">
+                                <label class="block mb-3 font-bold text-primary">Editorial</label>
+                                <input type="text" id="apaPublisher"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    placeholder="Ej: Pearson">
                             </div>
-                            <div id="fieldJournal" class="form-group" style="display:none;">
-                                <label>Nombre de la Revista</label>
-                                <input type="text" id="apaJournal" class="form-control" placeholder="Ej: Revista de Psicología">
+                            <div id="fieldJournal" class="mb-8 hidden">
+                                <label class="block mb-3 font-bold text-primary">Nombre de la Revista</label>
+                                <input type="text" id="apaJournal"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    placeholder="Ej: Revista de Psicología">
                             </div>
-                            <div id="fieldUrl" class="form-group" style="display:none;">
-                                <label>URL</label>
-                                <input type="text" id="apaUrl" class="form-control" placeholder="https://...">
+                            <div id="fieldUrl" class="mb-8 hidden">
+                                <label class="block mb-3 font-bold text-primary">URL</label>
+                                <input type="text" id="apaUrl"
+                                    class="w-full p-4 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    placeholder="https://...">
                             </div>
 
-                            <button class="btn" onclick="generateAPA()" style="width: 100%;">Generar Cita APA</button>
+                            <button
+                                class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit w-full"
+                                onclick="generateAPA()">Generar Cita APA</button>
 
-                            <div id="apaResult" class="result-box" style="display:none; margin-top: 2rem;"></div>
+                            <div id="apaResult"
+                                class="bg-gray-50 p-8 border-l-4 border-accent mt-10 rounded-xl font-medium overflow-wrap break-word break-words hidden">
+                            </div>
                         </div>
 
-                        <div
-                            style="margin-top: 3rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); font-size: 0.85rem; color: var(--text-gray);">
-                            <p><b>Generador Manual:</b> Esta herramienta te permite crear citas APA de forma manual cuando tienes toda la información bibliográfica. Si tienes URLs o DOIs, usa las <a onclick="switchCitationTool('single')"
-                                style="color: var(--accent); cursor: pointer; text-decoration: underline; font-weight: 700;">herramientas automáticas</a> para una experiencia más rápida.
+                        <div class="tip-box text-left">
+                            <i class="fas fa-info-circle"></i>
+                            <p><b>Generador Manual:</b> Esta herramienta te permite crear citas APA de forma manual
+                                cuando tienes toda la información bibliográfica. Si tienes URLs o DOIs, usa las <a
+                                    onclick="switchCitationTool('single')"
+                                    class="text-accent cursor-pointer underline font-bold">herramientas automáticas</a>.
                             </p>
                         </div>
                     </div>
@@ -323,293 +447,417 @@
         </section>
 
 
-        <!-- SECCIÓN 3: CALCULADORA DE MUESTRA -->
-        <section id="sample-calculator" class="page-section" style="padding: 1.5rem 0;">
-            <div class="container" style="max-width: 1100px; padding: 0 1rem;">
-                <div class="section-header" style="margin-bottom: 2rem;">
-                    <span class="internal-badge" style="margin-bottom: 0.5rem; display: inline-block;">Herramienta
-                        Estadística</span>
-                    <h2 style="font-size: 2rem;">Calculadora de Tamaño de Muestra</h2>
+        <!-- SECCIÓN: CALCULADORA DE MUESTRA -->
+        <section id="sample-calculator" class="page-section">
+            <div class="section-container">
+                <div class="section-header">
+                    <span
+                        class="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">Estadística
+                        Inferencial</span>
+                    <h2 class="text-4xl text-primary mb-4 font-bold">Calculadora de Muestra</h2>
+                    <p class="text-gray text-lg max-w-2xl mx-auto">Calcula con precisión el tamaño de tu muestra para
+                        investigaciones con poblaciones finitas e infinitas.</p>
                 </div>
-
-                <div class="calculator-card two-column-grid" style="padding: 2rem;">
+                <div
+                    class="bg-white p-10 rounded-3xl shadow-modal border border-border flex flex-col gap-6 grid lg:grid-cols-[1.2fr_1fr] gap-10 items-start p-8">
                     <!-- COLUMNA IZQUIERDA: INPUTS -->
-                    <div class="calc-inputs" style="display: flex; flex-direction: column; gap: 1rem;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label style="margin-bottom: 0.5rem;"><i class="fas fa-users"></i> Población
+                    <div class="flex flex-col gap-4">
+                        <div class="mb-0">
+                            <label class="mb-2 flex items-center gap-2 text-sm"><i class="fas fa-users"></i> Población
                                 (Universo)</label>
-                            <div class="input-with-icon">
-                                <i class="fas fa-search"></i>
-                                <input type="number" id="popSize" class="form-control"
+                            <div class="relative flex items-center">
+                                <i class="fas fa-search absolute left-4 text-gray text-lg"></i>
+                                <input type="number" id="popSize"
+                                    class="w-full p-4 pl-12 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
                                     placeholder="Ej: 5000 (O vacío si es infinita)">
                             </div>
                         </div>
 
-                        <div class="calc-row" style="gap: 1rem;">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label style="margin-bottom: 0.5rem;"><i class="fas fa-shield-alt"></i>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="mb-0">
+                                <label class="mb-2 flex items-center gap-2 text-sm"><i class="fas fa-shield-alt"></i>
                                     Confianza</label>
-                                <select id="confidence" class="form-control"
-                                    style="padding: 0.8rem 0.8rem 0.8rem 3rem;">
+                                <select id="confidence"
+                                    class="w-full p-4 pl-12 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white">
                                     <option value="1.645">90%</option>
                                     <option value="1.96" selected>95%</option>
                                     <option value="2.576">99%</option>
                                 </select>
                             </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label style="margin-bottom: 0.5rem;"><i class="fas fa-bullseye"></i> Error (%)</label>
-                                <input type="number" id="errorMargin" class="form-control" value="5" step="0.1"
-                                    style="padding: 0.8rem 0.8rem 0.8rem 3rem;">
+                            <div class="mb-0">
+                                <label class="mb-2 flex items-center gap-2 text-sm"><i class="fas fa-bullseye"></i>
+                                    Error (%)</label>
+                                <input type="number" id="errorMargin"
+                                    class="w-full p-4 pl-12 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    value="5" step="0.1">
                             </div>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label style="margin-bottom: 0.5rem;"><i class="fas fa-chart-line"></i> Probabilidad
+                        <div class="mb-0">
+                            <label class="mb-2 flex items-center gap-2 text-sm"><i class="fas fa-chart-line"></i>
+                                Probabilidad
                                 (p/q)</label>
-                            <div class="input-with-icon">
-                                <i class="fas fa-balance-scale"></i>
-                                <input type="number" id="probability" class="form-control" value="50">
+                            <div class="relative flex items-center">
+                                <i class="fas fa-balance-scale absolute left-4 text-gray text-lg"></i>
+                                <input type="number" id="probability"
+                                    class="w-full p-4 pl-12 border-2 border-border rounded-xl text-base transition-colors focus:outline-none focus:border-accent bg-white"
+                                    value="50">
                             </div>
                         </div>
 
-                        <button class="btn" onclick="calculateSample()"
-                            style="width: 100%; height: 3.5rem; justify-content: center; margin-top: 0.5rem; font-size: 1.1rem;">
+                        <button
+                            class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit w-full h-14 justify-center text-lg mt-2"
+                            onclick="calculateSample()">
                             <i class="fas fa-calculator"></i> Calcular Ahora
                         </button>
                     </div>
 
                     <!-- COLUMNA DERECHA: RESULTADOS -->
-                    <div class="calc-results-area" style="display: flex; flex-direction: column; gap: 1.5rem;">
-                        <div id="sampleResult" class="result-box" style="display: flex; opacity: 0.5;">
-                            <span
-                                style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 0.1em; display: block; margin-bottom: 0.5rem;">Total
+                    <div class="flex flex-col gap-6">
+                        <div id="sampleResult"
+                            class="bg-gradient-to-br from-bg-light to-gray-100 border-2 border-blue-100 p-8 mt-0 relative overflow-hidden h-full flex flex-col justify-center min-h-[300px] flex opacity-50">
+                            <span class="text-xs text-accent uppercase font-extrabold tracking-widest block mb-2">Total
                                 Sugerido</span>
-                            <div id="sampleCount"
-                                style="font-size: 5rem; font-weight: 900; color: var(--primary); line-height: 1;">0
+                            <div id="sampleCount" class="text-8xl font-black text-primary leading-none relative z-10">0
                             </div>
-                            <p style="color: var(--text-gray); font-weight: 600; font-size: 0.9rem;">Sujetos Requeridos
+                            <p class="text-gray font-semibold text-sm">Sujetos Requeridos
                             </p>
-                            <div style="height: 1px; background: var(--border); margin: 1rem 0; width: 100%;"></div>
-                            <p id="sampleDesc"
-                                style="margin-top: 0; font-style: normal; color: var(--primary-light); font-size: 0.85rem; line-height: 1.5;">
+                            <div class="h-px bg-border my-4 w-full"></div>
+                            <p id="sampleDesc" class="mt-0 font-normal text-primary-light text-sm leading-relaxed">
                                 Ingresa los datos para ver el cálculo detallado.</p>
                         </div>
                     </div>
                 </div>
 
-                <div
-                    style="margin-top: 2rem; padding: 1.5rem; background: rgba(37, 99, 235, 0.03); border-radius: 12px; border-left: 3px solid var(--accent); display: flex; align-items: center; gap: 1rem;">
-                    <i class="fas fa-info-circle" style="color: var(--accent); font-size: 1.2rem;"></i>
-                    <p style="color: var(--text-gray); font-size: 0.85rem; margin: 0;"><b>Nota:</b> Utilizamos la
+                <div class="tip-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p><b>Nota:</b> Utilizamos la
                         corrección de Cochran para poblaciones finitas. El estándar recomendado es 95% de confianza y 5%
                         de error.</p>
                 </div>
             </div>
         </section>
 
-        <!-- SECCIÓN 4: CHAT PDF CON VISOR - 3 COLUMNAS -->
-        <section id="ai-chat" class="page-section">
-            <div class="container" style="max-width: 1600px;">
-                <div class="section-header">
-                    <h2>Neotesis IA - Chat con PDF</h2>
-                    <p>Potenciado por Llama 3.3. Análisis inteligente con referencias visuales al documento.</p>
-                </div>
+        <!-- SECCIÓN: CHAT IA - PDF -->
+        <section id="ai-chat" class="page-section p-0">
+            <div class="h-full flex flex-col overflow-hidden bg-white border-t border-slate-200">
+                <div class="flex-grow flex overflow-hidden pdf-chat-layout relative">
+                    <!-- Overlay para móvil -->
+                    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleChatHistory()"></div>
 
-                <div class="pdf-chat-layout three-column-layout">
                     <!-- COLUMNA 1: HISTORIAL DE CHATS -->
-                    <div class="chat-history-sidebar" id="chatHistorySidebar">
-                        <div class="sidebar-header">
-                            <h4><i class="fas fa-history"></i> Mis Chats</h4>
-                            <button class="btn btn-secondary" onclick="createNewChat()" style="padding: 0.5rem 0.8rem; font-size: 0.8rem;">
-                                <i class="fas fa-plus"></i> Nuevo
+                    <aside class="w-72 flex-shrink-0 flex flex-col bg-white border-r border-slate-200 overflow-hidden"
+                        id="chatHistorySidebar">
+                        <div class="p-4">
+                            <button onclick="createNewChat()"
+                                class="w-full flex items-center justify-center gap-2 bg-white hover:bg-primary hover:text-white py-2.5 rounded-xl font-semibold text-sm transition-all group border border-slate-200 shadow-sm">
+                                <span
+                                    class="material-icons-round text-lg group-hover:rotate-90 transition-transform">add</span>
+                                Nuevo Chat
                             </button>
                         </div>
-                        <!-- Notificación de autenticación -->
-                        <div id="authNotification" class="auth-notification" style="display: none;">
-                            <div class="auth-notification-content">
-                                <i class="fas fa-user-lock"></i>
-                                <p style="font-size: 0.85rem;">Inicia sesión</p>
-                                <button class="btn" onclick="openAuthModalFromChat()" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                    <i class="fas fa-sign-in-alt"></i> Ingresar
-                                </button>
-                            </div>
+
+                        <!-- Notificación de autenticación (Sidebar) -->
+                        <div id="authNotification"
+                            class="p-4 m-4 bg-blue-50 border border-blue-100 rounded-xl text-center hidden">
+                            <p class="text-xs font-bold text-primary mb-2">Acceso Guardado</p>
+                            <button onclick="openAuthModalFromChat()"
+                                class="text-[10px] bg-primary text-white px-3 py-1.5 rounded-lg font-bold">Ingresar</button>
                         </div>
-                        <!-- Lista de Chats (visible solo si está logueado) -->
-                        <div id="chatListPanel" class="chat-list-panel">
-                            <div id="chatList" class="chat-list">
+
+                        <div class="flex-grow overflow-y-auto custom-scrollbar p-3 space-y-1" id="chatListPanel">
+                            <div class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                Recientes</div>
+                            <div id="chatList" class="flex flex-col gap-1">
                                 <!-- Lista de chats se carga aquí -->
                             </div>
+                            <div id="chatEmptyState"
+                                class="flex flex-col items-center justify-center p-8 text-center opacity-40">
+                                <span class="material-icons-round text-2xl mb-2">chat_bubble_outline</span>
+                                <p class="text-[10px] font-bold text-slate-500">Sin chats</p>
+                            </div>
                         </div>
-                        <div id="chatEmptyState" class="chat-empty-state">
-                            <i class="fas fa-comments"></i>
-                            <p>Sin chats guardados</p>
-                            <small>Inicia sesión para guardar</small>
-                        </div>
-                    </div>
+
+                        <div class="p-4 bg-white border-t border-slate-100" id="quotaMonitor">
+                            <div class="flex items-center justify-between text-xs mb-2 text-slate-500">
+                                <span>Consultas hoy</span>
+                                <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                    <div id="quotaBar" class="h-full bg-primary w-0 transition-all duration-500"></div>
+                                </div>
+                                <div id="quotaTimer" class="mt-2 text-[10px] text-red-500 font-bold hidden text-center">
+                                    <span id="countdown">23:59:59</span>
+                                </div>
+                            </div>
+                    </aside>
 
                     <!-- COLUMNA 2: CHAT PRINCIPAL -->
-                    <div class="chat-panel-main">
-                        <!-- Monitoreo de Cuota -->
-                        <div class="quota-monitor" id="quotaMonitor">
-                            <div class="quota-info">
-                                <div class="status-badge active" id="statusBadge">
-                                    <span class="status-dot"></span>
-                                    <span id="serviceStatusText">Servicio Activo</span>
+                    <section id="chatPanelMain" class="flex-grow flex flex-col bg-white relative min-w-0">
+                        <!-- Header del Chat Activo -->
+                        <div
+                            class="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-20">
+                            <div class="flex items-center gap-3">
+                                <button onclick="toggleChatHistory()" class="md:hidden p-1 text-slate-600">
+                                    <span class="material-icons-round">menu</span>
+                                </button>
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]"
+                                            id="statusBadge"></div>
+                                        <h2 class="font-bold text-slate-800 text-[15px] leading-tight"
+                                            id="serviceStatusText">
+                                            Neotesis IA</h2>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400 font-medium" id="currentChatPdfName">Basado en:
+                                        Metodología de in...</p>
                                 </div>
-                                <span id="quotaText">3 / 3 consultas</span>
                             </div>
-                            <div class="quota-bar-container">
-                                <div id="quotaBar" class="quota-bar"></div>
-                            </div>
-                            <div id="quotaTimer" class="quota-timer" style="display: none;">
-                                <i class="fas fa-clock"></i> Restablece en: <span id="countdown">23:59:59</span>
+                            <div class="flex items-center gap-1">
+                                <button id="viewToggleBtn" onclick="toggleMobileView()"
+                                    class="md:hidden p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                                    title="Alternar vista">
+                                    <span class="material-icons-round text-xl" id="viewToggleIcon">description</span>
+                                </button>
+                                <button onclick="shareChat()"
+                                    class="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                                    title="Compartir chat">
+                                    <span class="material-icons-round text-xl">share</span>
+                                </button>
+                                <div class="relative" id="chatOptionsContainer">
+                                    <button onclick="toggleChatOptions()"
+                                        class="hidden md:flex p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors"
+                                        id="chatOptionsBtn">
+                                        <span class="material-icons-round text-xl">more_vert</span>
+                                    </button>
+                                    <div id="chatOptionsMenu" class="chat-options-menu hidden">
+                                        <button onclick="renameChatFromMenu()" class="chat-option-item">
+                                            <i class="fas fa-pen"></i>
+                                            <span>Renombrar chat</span>
+                                        </button>
+                                        <button onclick="deleteChatFromMenu()" class="chat-option-item text-red-600">
+                                            <i class="fas fa-trash-can"></i>
+                                            <span>Eliminar chat</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Mensajes del Chat -->
-                        <div id="chatMessages" class="messages">
-                            <div class="msg ai">
-                                <div class="ai-avatar">
-                                    <i class="fas fa-robot"></i>
+                        <div id="chatMessages"
+                            class="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-8 scroll-smooth relative">
+                            <!-- Ejemplo de mensaje IA inicial -->
+                            <div class="flex flex-col gap-2 max-w-4xl mx-auto w-full animate-fadeIn items-start mb-6">
+                                <div class="flex items-center gap-2 mb-1 ml-2">
+                                    <div
+                                        class="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                                        <span class="material-icons-round text-primary text-[18px]">smart_toy</span>
+                                    </div>
+                                    <p class="message-label ai-label">Neotesis IA</p>
                                 </div>
-                                <div class="msg-content">
-                                    <strong>Neotesis IA:</strong> Hola. Soy tu asistente inteligente. Sube un PDF y podré responder preguntas específicas sobre su contenido, mostrándote exactamente de dónde saqué la información.
+                                <div class="ai-bubble chat-message-bubble ml-10">
+                                    ¡Hola! Sube un PDF para comenzar el análisis. Podré responder preguntas y citar
+                                    fuentes directamente.
                                 </div>
                             </div>
                         </div>
 
                         <!-- Input del Chat -->
-                        <div class="chat-input-area">
-                            <div class="input-container">
-                                <input type="text" id="userInput" class="form-control"
-                                    placeholder="Pregunta sobre el documento..." onkeypress="handleEnter(event)">
-                                <button id="chatSendBtn" class="btn send-btn" onclick="sendMessage()">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                            <div class="input-hint">
-                                <small>La IA analizará el PDF y te mostrará referencias específicas</small>
+                        <div class="p-4 md:p-6 bg-white relative z-30">
+                            <div class="max-w-4xl mx-auto">
+                                <div class="chat-input-container relative flex items-center gap-2 transition-all">
+                                    <button onclick="document.getElementById('pdfInput').click()"
+                                        class="p-2 text-slate-400 hover:text-primary transition-colors flex-shrink-0"
+                                        title="Subir PDF">
+                                        <span class="material-icons-round text-[20px]">attach_file</span>
+                                    </button>
+                                    <textarea id="userInput"
+                                        class="flex-grow bg-transparent border-none focus:ring-0 text-[15px] py-3 px-1 resize-none placeholder:text-slate-300 custom-scrollbar max-h-32"
+                                        placeholder="Pregunta algo sobre el documento..." rows="1"
+                                        onkeypress="handleEnter(event)"></textarea>
+                                    <div class="w-px h-6 bg-slate-200 mx-1"></div>
+                                    <button id="chatSendBtn" onclick="sendMessage()"
+                                        class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center hover:bg-blue-700 transition-all shadow-lg shadow-primary/25 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <span class="material-icons-round">send</span>
+                                    </button>
+                                </div>
+                                <p
+                                    class="text-[9px] text-center text-slate-400 mt-4 flex items-center justify-center gap-1.5 opacity-80">
+                                    <span class="material-icons-round text-[12px]">info_outline</span>
+                                    La IA analiza el PDF y genera respuestas basadas únicamente en su contenido.
+                                </p>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
                     <!-- COLUMNA 3: VISOR DE PDF -->
-                    <div class="pdf-viewer-panel">
-                        <div class="pdf-header">
-                            <div class="pdf-controls">
-                                <input type="file" id="pdfInput" accept="application/pdf" style="display: none;"
-                                    onchange="handlePdfUpload(this)">
-                                <label for="pdfInput" class="pdf-upload-btn">
-                                    <i class="fas fa-file-pdf"></i> Subir PDF
-                                </label>
-                                <div id="pdfStatus" class="pdf-status">
-                                    <i class="fas fa-info-circle"></i> Sube un documento
+                    <aside class="w-80 flex-shrink-0 flex flex-col bg-white border-l border-slate-200 overflow-hidden"
+                        id="pdfViewerSidebar">
+                        <div class="p-3 border-b border-slate-200 bg-white flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-tighter">Vista previa
+                                    PDF</span>
+                                <div id="pdfStatus"
+                                    class="flex items-center gap-1 text-[10px] text-slate-500 font-medium">
+                                    <span class="material-icons-round text-xs" id="pdfStatusIcon">pending</span>
+                                    <span id="pdfStatusText">Esperando...</span>
                                 </div>
+                            </div>
+                            <input type="file" id="pdfInput" class="hidden" accept=".pdf"
+                                onchange="handlePdfUpload(this)">
+                            <button id="changePdfBtn" onclick="document.getElementById('pdfInput').click()"
+                                class="w-full hidden items-center justify-center gap-2 bg-primary/10 text-primary px-3 py-2 rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors border border-primary/20">
+                                <span class="material-icons-round text-sm">upload_file</span>
+                                Cambiar PDF
+                            </button>
+                        </div>
+
+                        <!-- Contenedor del Visor -->
+                        <div id="pdfViewerContainer" class="flex-grow overflow-hidden flex flex-col relative">
+                            <!-- Estado Vacío -->
+                            <div id="pdfEmptyState"
+                                class="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-slate-50 z-10 transition-opacity duration-300">
+                                <div
+                                    class="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center mb-4 shadow-sm">
+                                    <span class="material-icons-round text-3xl text-slate-300">description</span>
+                                </div>
+                                <p class="text-xs font-bold text-slate-600 mb-1">Sin Documento</p>
+                                <p class="text-[10px] text-slate-500">Carga un PDF para visualizarlo aquí.</p>
+                            </div>
+
+                            <!-- PDF pages will be injected here -->
+                            <div id="pdfViewer"
+                                class="flex-grow overflow-y-auto px-4 pb-4 space-y-4 custom-scrollbar bg-white hidden">
+                                <!-- Las páginas se renderizarán como imágenes o canvases -->
                             </div>
                         </div>
 
-                        <div class="pdf-viewer-container">
-                            <div id="pdfViewer" class="pdf-viewer">
-                                <div class="pdf-placeholder">
-                                    <i class="fas fa-file-pdf fa-4x" style="color: var(--border); margin-bottom: 1rem;"></i>
-                                    <p style="color: var(--text-gray); font-size: 1rem;">Sube un PDF para visualizarlo</p>
-                                    <small style="color: var(--text-gray); font-size: 0.85rem;">El documento se procesará para análisis inteligente</small>
-                                </div>
+                        <!-- Controles PDF -->
+                        <div id="pdfControls"
+                            class="p-4 bg-white border-t border-slate-200 flex items-center justify-between hidden">
+                            <div class="flex items-center gap-1">
+                                <button id="prevPage" onclick="changePage(-1)"
+                                    class="p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-colors disabled:opacity-30">
+                                    <span class="material-icons-round text-lg">chevron_left</span>
+                                </button>
+                                <button id="nextPage" onclick="changePage(1)"
+                                    class="p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-colors disabled:opacity-30">
+                                    <span class="material-icons-round text-lg">chevron_right</span>
+                                </button>
                             </div>
 
-                            <!-- Controles de navegación del PDF -->
-                            <div id="pdfControls" class="pdf-navigation" style="display: none;">
-                                <button id="prevPage" class="nav-btn" onclick="changePage(-1)">
-                                    <i class="fas fa-chevron-left"></i>
+                            <div class="flex flex-col items-center">
+                                <span class="text-[10px] font-bold" id="zoomLevel">100%</span>
+                                <span class="text-[9px] text-slate-400"><span id="currentPage">1</span> / <span
+                                        id="totalPages">1</span></span>
+                            </div>
+
+                            <div class="flex items-center gap-1">
+                                <button onclick="zoomPDF(-0.2)"
+                                    class="p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-colors">
+                                    <span class="material-icons-round text-lg">zoom_out</span>
                                 </button>
-                                <span id="pageInfo" class="page-info">Página <span id="currentPage">1</span> de <span id="totalPages">1</span></span>
-                                <button id="nextPage" class="nav-btn" onclick="changePage(1)">
-                                    <i class="fas fa-chevron-right"></i>
+                                <button onclick="zoomPDF(0.2)"
+                                    class="p-1.5 hover:bg-slate-100 rounded text-slate-400 transition-colors">
+                                    <span class="material-icons-round text-lg">zoom_in</span>
                                 </button>
-                                <div class="zoom-controls">
-                                    <button class="zoom-btn" onclick="zoomPDF(-0.25)">
-                                        <i class="fas fa-search-minus"></i>
-                                    </button>
-                                    <span id="zoomLevel" class="zoom-level">100%</span>
-                                    <button class="zoom-btn" onclick="zoomPDF(0.25)">
-                                        <i class="fas fa-search-plus"></i>
-                                    </button>
-                                </div>
                             </div>
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2025 Neotesis Perú. Calidad y compromiso en tu investigación académica.</p>
+    <footer id="main-footer" class="bg-primary text-white text-center py-16 px-8 mt-auto">
+        <p class="opacity-70 text-sm">&copy; 2025 Neotesis Perú. Calidad y compromiso en tu investigación académica.</p>
     </footer>
 
     <!-- MODAL DE LOGIN/REGISTRO -->
-    <div id="authModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeAuthModal()">&times;</span>
-            
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchAuthTab('login')" id="loginTab">Iniciar Sesión</button>
-                <button class="auth-tab" onclick="switchAuthTab('register')" id="registerTab">Registrarse</button>
+    <div id="authModal"
+        class="hidden fixed top-0 left-0 w-full h-full bg-black/50 z-50 items-center justify-center animate-fadeIn p-4">
+        <div
+            class="bg-white p-6 md:p-8 rounded-2xl max-w-[400px] w-full relative animate-slideDown shadow-modal max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <span
+                class="absolute top-4 right-6 text-2xl cursor-pointer text-text-gray transition-colors hover:text-primary"
+                onclick="closeAuthModal()">&times;</span>
+
+            <div class="flex gap-2 mb-6 border-b border-border pb-1">
+                <button
+                    class="flex-1 p-3 border-0 bg-none text-sm font-bold text-slate-500 cursor-pointer transition-all rounded-lg text-accent bg-accent/10"
+                    onclick="switchAuthTab('login')" id="loginTab">Iniciar Sesión</button>
+                <button
+                    class="flex-1 p-3 border-0 bg-none text-sm font-bold text-slate-500 cursor-pointer transition-all rounded-lg hover:text-primary"
+                    onclick="switchAuthTab('register')" id="registerTab">Registrarse</button>
             </div>
-            
+
             <!-- FORMULARIO LOGIN -->
             <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="loginEmail" class="form-control" placeholder="tu@email.com" required>
+                <div class="mb-5">
+                    <label class="block mb-2 text-sm font-bold text-primary">Email</label>
+                    <input type="email" id="loginEmail"
+                        class="w-full p-3 border-2 border-border rounded-xl text-sm transition-colors focus:outline-none focus:border-accent bg-white"
+                        placeholder="tu@email.com" required>
                 </div>
-                <div class="form-group">
-                    <label>Contraseña</label>
-                    <input type="password" id="loginPassword" class="form-control" placeholder="Tu contraseña" required>
+                <div class="mb-5">
+                    <label class="block mb-2 text-sm font-bold text-primary">Contraseña</label>
+                    <input type="password" id="loginPassword"
+                        class="w-full p-3 border-2 border-border rounded-xl text-sm transition-colors focus:outline-none focus:border-accent bg-white"
+                        placeholder="Tu contraseña" required>
                 </div>
-                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">
+                <button type="submit"
+                    class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit w-full mt-4">
                     <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
             </form>
-            
+
             <!-- FORMULARIO REGISTRO -->
-            <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
-                <div class="form-group">
-                    <label>Nombre Completo</label>
-                    <input type="text" id="registerName" class="form-control" placeholder="Tu nombre" required minlength="2" maxlength="100">
+            <form id="registerForm" onsubmit="handleRegister(event)" class="hidden">
+                <div class="mb-4">
+                    <label class="block mb-1.5 text-sm font-bold text-primary">Nombre Completo</label>
+                    <input type="text" id="registerName"
+                        class="w-full p-3 border-2 border-border rounded-xl text-sm transition-colors focus:outline-none focus:border-accent bg-white"
+                        placeholder="Tu nombre" required minlength="2" maxlength="100">
                 </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="registerEmail" class="form-control" placeholder="tu@email.com" required>
+                <div class="mb-4">
+                    <label class="block mb-1.5 text-sm font-bold text-primary">Email</label>
+                    <input type="email" id="registerEmail"
+                        class="w-full p-3 border-2 border-border rounded-xl text-sm transition-colors focus:outline-none focus:border-accent bg-white"
+                        placeholder="tu@email.com" required>
                 </div>
-                <div class="form-group">
-                    <label>Contraseña</label>
-                    <input type="password" id="registerPassword" class="form-control" placeholder="Mínimo 8 caracteres" required minlength="8">
+                <div class="mb-4">
+                    <label class="block mb-1.5 text-sm font-bold text-primary">Contraseña</label>
+                    <input type="password" id="registerPassword"
+                        class="w-full p-3 border-2 border-border rounded-xl text-sm transition-colors focus:outline-none focus:border-accent bg-white"
+                        placeholder="8+ caracteres" required minlength="8">
                 </div>
-                <div class="form-group">
-                    <label>Confirmar Contraseña</label>
-                    <input type="password" id="registerPasswordConfirm" class="form-control" placeholder="Repite tu contraseña" required>
+                <div class="mb-5">
+                    <label class="block mb-1.5 text-sm font-bold text-primary">Confirmar Contraseña</label>
+                    <input type="password" id="registerPasswordConfirm"
+                        class="w-full p-3 border-2 border-border rounded-xl text-sm transition-colors focus:outline-none focus:border-accent bg-white"
+                        placeholder="Repite tu contraseña" required>
                 </div>
-                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">
+                <button type="submit"
+                    class="bg-accent hover:bg-accent-hover text-white py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 hover:scale-105 shadow-glow border-none cursor-pointer text-base w-fit w-full mt-4">
                     <i class="fas fa-user-plus"></i> Crear Cuenta
                 </button>
             </form>
-            
-            <div id="authMessage" class="auth-message" style="display: none;"></div>
+
+            <div id="authMessage" class="mt-6 p-4 rounded-xl text-center font-semibold hidden"></div>
         </div>
     </div>
 
     <!-- USER MENU (visible cuando está logueado) -->
-    <div id="userMenu" class="user-menu" style="display: none;">
-        <div class="user-info">
-            <i class="fas fa-user-circle"></i>
+    <div id="userMenu" class="flex items-center gap-4 hidden">
+        <div class="flex items-center gap-2 font-semibold text-primary">
+            <i class="fas fa-user-circle text-2xl text-accent"></i>
             <span id="userEmail"></span>
         </div>
-        <button class="btn btn-secondary" onclick="handleLogout()">
+        <button
+            class="bg-gray-100 hover:bg-gray-200 text-primary py-3 px-7 rounded-full font-bold inline-flex items-center gap-3 transition-all duration-300 border-none cursor-pointer text-base w-fit"
+            onclick="handleLogout()">
             <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
         </button>
     </div>
-
     <script src="scripts.js" defer></script>
 </body>
 

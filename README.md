@@ -4,45 +4,80 @@ Plataforma académica integral con generador de citas APA, chat PDF con IA y cal
 
 ![Neotesis Hero](hero.png)
 
-## 🌟 Características
+## 🌟 Características Principales
 
+### 📚 Generación de Citas
 - **Generador APA 7ma Edición**: Crea referencias bibliográficas precisas para libros, artículos y páginas web
 - **Auto-Cita Inteligente**: Genera citas automáticamente desde URLs o DOIs
   - Soporte para repositorios peruanos (UCV, UPAO, UNMSM, etc.)
   - Compatible con bases de datos científicas (ScienceDirect, CrossRef, etc.)
   - Detección automática de metadatos
 - **Cita en Lote**: Procesa hasta 20 URLs simultáneamente
+
+### 🤖 Chat PDF con IA
+- **Análisis Inteligente**: Usa Llama 3.3 de Groq para responder preguntas sobre tus documentos
+- **Referencias Automáticas**: Cada respuesta incluye las páginas exactas del PDF de donde se extrajo la información
+- **Navegación Integrada**: Haz clic en las referencias para ir directamente a la página del documento
+- **Contexto Persistente**: Cada chat mantiene su propio PDF asociado
+- **Gestión de Chats**: Crea, renombra y elimina chats fácilmente
+
+### 👤 Sistema de Usuarios
+- **Autenticación Segura**: Registro y login con JWT
+- **Historial de Chats**: Guarda y accede a todos tus chats anteriores
+- **Sincronización**: Accede a tus chats desde cualquier dispositivo
+
+### 🎨 Interfaz Moderna
+- **Notificaciones Elegantes**: Sistema de toasts para feedback visual
+- **Modales Personalizados**: Confirmaciones y prompts con diseño premium
+- **Responsive Design**: Optimizado para móvil y desktop
+- **Menú de Opciones**: Gestiona tus chats con un menú intuitivo
+
+### 📊 Herramientas Estadísticas
 - **Calculadora de Muestra**: Determina el tamaño de muestra para investigaciones cuantitativas
-- **Chat PDF con IA**: Analiza documentos PDF usando Llama 3.3 de Groq
-  - Hasta 12,000 caracteres de contexto
-  - 3 consultas gratuitas por día
 
 ## 🏗️ Arquitectura
 
 ```mermaid
 graph TB
-    A[Cliente - Navegador] -->|HTTPS| B[Railway App]
-    B --> C[index.html + styles.css]
-    B --> D[scripts.js]
-    D -->|POST /api/chat| E[Express Route: /api/chat]
-    D -->|POST /api/proxy| F[Express Route: /api/proxy]
-    E -->|API Key segura| G[Groq API]
-    F -->|User-Agent académico| H[Repositorios/APIs]
-    E -->|Rate Limiting por IP| I[3 requests/24h]
+    A[Cliente - Navegador] -->|HTTPS| B[Railway App - Express.js]
+    B --> C[Frontend: HTML + CSS + JS]
+    B --> D[API Routes]
+    
+    D -->|POST /api/auth/register| E1[Registro]
+    D -->|POST /api/auth/login| E2[Login]
+    D -->|GET /api/chats| E3[Lista de Chats]
+    D -->|POST /api/chat| E4[Chat con IA]
+    D -->|POST /api/proxy| E5[Proxy Académico]
+    
+    E1 --> F[PostgreSQL Database]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+    
+    E4 -->|API Key segura| G[Groq API - Llama 3.3]
+    E5 -->|User-Agent académico| H[Repositorios/APIs]
+    
+    D -->|JWT Auth| I[Middleware de Autenticación]
+    D -->|Rate Limiting| J[Control de Cuotas]
 
-    style E fill:#10b981
-    style F fill:#3b82f6
+    style E4 fill:#10b981
+    style E5 fill:#3b82f6
     style G fill:#f59e0b
+    style F fill:#8b5cf6
     style I fill:#ef4444
 ```
 
 ### Seguridad
 
-✅ **API Keys protegidas**: Nunca expuestas en el cliente, solo en variables de entorno del servidor  
-✅ **Rate Limiting robusto**: Implementado por IP en el servidor (no manipulable desde el cliente)  
-✅ **Whitelist de dominios**: Solo se permite scraping de sitios académicos autorizados  
-✅ **Validación de inputs**: Todas las entradas del usuario son validadas y sanitizadas  
-✅ **Headers de seguridad**: CSP, X-Frame-Options, etc.
+✅ **Autenticación JWT**: Tokens seguros con expiración de 7 días  
+✅ **Encriptación de Contraseñas**: Bcrypt con salt rounds para hash seguro  
+✅ **API Keys Protegidas**: Nunca expuestas en el cliente, solo en variables de entorno del servidor  
+✅ **Rate Limiting Robusto**: Implementado por IP y usuario en el servidor  
+✅ **Whitelist de Dominios**: Solo se permite scraping de sitios académicos autorizados  
+✅ **Validación de Inputs**: Todas las entradas son validadas y sanitizadas (XSS, SQL Injection)  
+✅ **Headers de Seguridad**: CSP, X-Frame-Options, CORS configurado  
+✅ **Protección CSRF**: Tokens CSRF en formularios críticos  
+✅ **Session Management**: Timeout automático por inactividad
 
 ## 🚀 Deployment en Railway
 
@@ -148,12 +183,37 @@ El sitio estará disponible en `http://localhost:3000`
 neotesis/
 ├── server.js                # Servidor Express con rutas API
 ├── index.html               # Página principal
-├── styles.css               # Estilos
-├── scripts.js               # Lógica del cliente (SIN API keys)
-├── hero.png                 # Imagen hero
+├── styles.css               # Estilos globales y componentes
+├── scripts.js               # Lógica del cliente
 ├── package.json             # Dependencias
-├── .gitignore               # Archivos ignorados por Git
-└── README.md                # Este archivo
+├── .env                     # Variables de entorno (no en Git)
+├── .gitignore               # Archivos ignorados
+│
+├── models/                  # Modelos de base de datos (Sequelize)
+│   ├── index.js            # Configuración de Sequelize
+│   ├── User.js             # Modelo de usuarios
+│   ├── Chat.js             # Modelo de chats
+│   └── Message.js          # Modelo de mensajes
+│
+├── middleware/              # Middleware de Express
+│   ├── auth.js             # Autenticación JWT
+│   ├── rateLimit.js        # Rate limiting
+│   └── validation.js       # Validación de inputs
+│
+├── routes/                  # Rutas de la API
+│   └── api.js              # Endpoints de la API
+│
+├── config/                  # Configuración
+│   ├── database.js         # Configuración de PostgreSQL
+│   └── cloudflare.md       # Documentación de Cloudflare
+│
+├── migrations/              # Migraciones de base de datos
+│   └── add_pdf_content_to_chats.js
+│
+├── docs/                    # Documentación
+│   └── AUTH_API.md         # Documentación de API de autenticación
+│
+└── README.md               # Este archivo
 ```
 
 ## 🔧 Troubleshooting

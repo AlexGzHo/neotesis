@@ -19,6 +19,16 @@ const Chat = sequelize.define('Chat', {
         type: DataTypes.TEXT,
         allowNull: true,
         defaultValue: null
+    },
+    pdf_pages: {
+        type: DataTypes.TEXT, // Storing as JSON string
+        allowNull: true,
+        defaultValue: null
+    },
+    total_pages: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     timestamps: true,
