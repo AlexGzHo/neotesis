@@ -14,11 +14,11 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <!-- Librería para leer PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         // Configuración de PDF.js Worker
         if (window.pdfjsLib) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
     </script>
 
@@ -746,7 +746,7 @@
                             </div>
 
                             <div class="flex flex-col items-center">
-                                <span class="text-[10px] font-bold" id="zoomLevel">100%</span>
+                                <span class="text-[10px] font-bold" id="zoomLevel">200%</span>
                                 <span class="text-[9px] text-slate-400"><span id="currentPage">1</span> / <span
                                         id="totalPages">1</span></span>
                             </div>

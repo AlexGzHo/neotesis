@@ -40,9 +40,12 @@ let isHtmlView = false; // Indica si se está usando vista HTML (historial) o Ca
 let pdfDocument = null;
 let currentPage = 1;
 let totalPages = 0;
-let currentZoom = 1.0;
+let currentZoom = 2.0; // Zoom inicial al 200% para mejor visualización del selector de texto
 let history = [];
 let quotaInterval = null;
+
+// Almacenar viewports por página para consistencia en resaltados
+const pageViewports = {};
 
 // ============================================================================
 // FUNCIONES DE SEGURIDAD FRONTEND
@@ -148,6 +151,8 @@ function handleSessionTimeout() {
     history = [];
     pdfText = '';
     pdfContextForAI = '';
+    // LIMPIAR: Eliminar viewports almacenados
+    Object.keys(pageViewports).forEach(key => delete pageViewports[key]);
     // Recargar página
     window.location.reload();
 }
@@ -1187,9 +1192,18 @@ async function renderPage(pageNum) {
 
         const scaleX = safeWidth / viewport.width;
         const scaleY = safeHeight / viewport.height;
-        const scale = Math.min(scaleX, scaleY, 1.5) * currentZoom;
+        // Remover límite de 1.5 para permitir zoom completo
+        const scale = Math.min(scaleX, scaleY) * currentZoom;
 
         const scaledViewport = page.getViewport({ scale: scale });
+
+        // GUARDAR: Almacenar el viewport para uso posterior en resaltados
+        pageViewports[pageNum] = {
+            viewport: scaledViewport,
+            scale: scale,
+            containerWidth: containerWidth,
+            containerHeight: containerHeight
+        };
 
         canvas.height = scaledViewport.height;
         canvas.width = scaledViewport.width;
@@ -1201,16 +1215,141 @@ async function renderPage(pageNum) {
 
         await page.render(renderContext).promise;
 
-        // Limpiar visor y agregar canvas
-        viewer.innerHTML = '';
-        viewer.appendChild(canvas);
+        // --- MEJORA: CAPAS INTERACTIVAS ---
+        const pageContainer = document.createElement('div');
+        pageContainer.className = 'pdf-page-container';
+        pageContainer.style.width = `${scaledViewport.width}px`;
+        pageContainer.style.height = `${scaledViewport.height}px`;
 
-        // Centrar el canvas
-        canvas.style.display = 'block';
-        canvas.style.margin = '20px auto';
+        // Capa de resaltado (vacía al inicio)
+        const highlightLayer = document.createElement('div');
+        highlightLayer.className = 'highlight-layer';
+        highlightLayer.id = `highlight-layer-${pageNum}`;
+
+        // Capa de texto (PDF.js textLayer)
+        const textLayerDiv = document.createElement('div');
+        textLayerDiv.className = 'textLayer';
+        // Asegurar que la capa de texto coincida exactamente con el viewport
+        textLayerDiv.style.width = `${scaledViewport.width}px`;
+        textLayerDiv.style.height = `${scaledViewport.height}px`;
+
+        const textContent = await page.getTextContent({
+            disableCombineTextItems: true
+        });
+
+        const textLayerPromise = pdfjsLib.renderTextLayer({
+            textContentSource: textContent,
+            container: textLayerDiv,
+            viewport: scaledViewport,
+            textDivs: [],
+            fontDeclarationStyleElement: null,
+            enhanceTextSelection: true
+        });
+
+        // Limpiar visor y construir estructura
+        viewer.innerHTML = '';
+        pageContainer.appendChild(canvas);
+        pageContainer.appendChild(highlightLayer);
+        pageContainer.appendChild(textLayerDiv);
+        viewer.appendChild(pageContainer);
+
+        // --- CONFIGURACIÓN DE SELECCIÓN NATIVA ---
+        await textLayerPromise;
+        setupNativeSelection(textLayerDiv, scaledViewport);
+
+        // Centrar el contenedor
+        pageContainer.style.display = 'block';
+        pageContainer.style.margin = '20px auto';
+
+        // Escuchar selección de texto manual
+        textLayerDiv.addEventListener('mouseup', handleTextSelection);
 
     } catch (e) {
         console.error('Error rendering page:', e);
+    }
+}
+
+// Global para rastrear el menú de selección activo
+let activeSelectionMenu = null;
+
+function handleTextSelection(e) {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+
+    // Eliminar menú anterior si existe
+    if (activeSelectionMenu) {
+        activeSelectionMenu.remove();
+        activeSelectionMenu = null;
+    }
+
+    if (selectedText.length > 5) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        // Obtener el contenedor del PDF
+        const pdfViewer = document.getElementById('pdfViewer');
+        if (!pdfViewer) return;
+
+        const viewerRect = pdfViewer.getBoundingClientRect();
+
+        // Calcular posición relativa al contenedor (considerando scroll)
+        const relativeTop = rect.top - viewerRect.top + pdfViewer.scrollTop;
+        const relativeLeft = rect.left - viewerRect.left + pdfViewer.scrollLeft;
+
+        const menu = document.createElement('div');
+        menu.className = 'selection-menu';
+
+        // Dimensiones aproximadas del menú para validación de límites
+        const menuHeight = 45;
+        const menuWidth = 200;
+
+        // Ajustar si se sale por arriba
+        let finalTop = relativeTop - menuHeight;
+        if (finalTop < pdfViewer.scrollTop) {
+            // Si no hay espacio arriba, colocar debajo del texto
+            finalTop = relativeTop + rect.height + 10;
+        }
+
+        // Ajustar si se sale por los lados
+        let finalLeft = relativeLeft + rect.width / 2;
+        const maxLeft = pdfViewer.scrollWidth - menuWidth / 2;
+        const minLeft = menuWidth / 2;
+        finalLeft = Math.max(minLeft, Math.min(maxLeft, finalLeft));
+
+        // Posicionar relativo al contenedor
+        menu.style.top = `${finalTop}px`;
+        menu.style.left = `${finalLeft}px`;
+        menu.style.transform = 'translateX(-50%)';
+
+        const btn = document.createElement('button');
+        btn.innerHTML = '<span class="material-icons-round" style="font-size:16px">chat</span> Preguntar sobre esto';
+        btn.onclick = () => {
+            const userInput = document.getElementById('userInput');
+            if (userInput) {
+                userInput.value = `Sobre el fragmento: "${selectedText}"... `;
+                userInput.focus();
+                // Colocar cursor al final
+                userInput.selectionStart = userInput.selectionEnd = userInput.value.length;
+                menu.remove();
+                activeSelectionMenu = null;
+            }
+        };
+
+        menu.appendChild(btn);
+
+        // Adjuntar al contenedor PDF en lugar de body
+        pdfViewer.appendChild(menu);
+        activeSelectionMenu = menu;
+
+        // Cerrar menú al hacer clic fuera
+        const closeMenu = (event) => {
+            if (!menu.contains(event.target)) {
+                menu.remove();
+                activeSelectionMenu = null;
+                document.removeEventListener('mousedown', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('mousedown', closeMenu), 10);
     }
 }
 
@@ -1241,6 +1380,12 @@ async function changePage(delta) {
 async function zoomPDF(delta) {
     currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
 
+    // Cerrar menú de selección activo antes de re-renderizar
+    if (activeSelectionMenu) {
+        activeSelectionMenu.remove();
+        activeSelectionMenu = null;
+    }
+
     // Si estamos en vista HTML, llamar a renderPage para actualizar el tamaño de fuente
     if (isHtmlView) {
         await renderPage(currentPage);
@@ -1252,17 +1397,205 @@ async function zoomPDF(delta) {
     updatePageNavigation();
 }
 
-function highlightPdfReference(pageNum, textSnippet = "") {
-    // Cambiar a la página especificada
-    if (pageNum && pageNum !== currentPage) {
+// --- FUNCIONES DE SOPORTE PARA SELECCIÓN NATIVA ---
+
+function setupNativeSelection(textLayerDiv, viewport) {
+    const spans = Array.from(textLayerDiv.querySelectorAll('span'));
+    if (spans.length === 0) return;
+
+    // 1. Agrupar spans por su posición vertical (líneas)
+    const linesMap = new Map();
+    const tolerance = 2; // Píxeles de tolerancia
+
+    spans.forEach(span => {
+        const top = parseFloat(span.style.top);
+        let found = false;
+        for (const [y, lineSpans] of linesMap.entries()) {
+            if (Math.abs(y - top) < tolerance) {
+                lineSpans.push(span);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            linesMap.set(top, [span]);
+        }
+    });
+
+    // 2. Procesar cada línea para aplicar eventos y manejar columnas
+    const xGapTolerance = viewport.width * 0.1; // 10% del ancho para detectar columnas
+
+    linesMap.forEach((lineSpans, y) => {
+        lineSpans.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+
+        // Sub-agrupar por columnas si hay huecos grandes
+        let currentGroup = [lineSpans[0]];
+        const groups = [currentGroup];
+
+        for (let i = 1; i < lineSpans.length; i++) {
+            const current = lineSpans[i];
+            const prev = lineSpans[i - 1];
+            const currentX = parseFloat(current.style.left);
+            const prevX = parseFloat(prev.style.left) + prev.offsetWidth;
+
+            if (currentX - prevX > xGapTolerance) {
+                currentGroup = [current];
+                groups.push(currentGroup);
+            } else {
+                currentGroup.push(current);
+            }
+        }
+
+        // Aplicar eventos a cada grupo (línea dentro de una columna)
+        groups.forEach(group => {
+            group.forEach(span => {
+                span.addEventListener('mouseenter', () => {
+                    group.forEach(s => s.classList.add('span-line-hover'));
+                });
+                span.addEventListener('mouseleave', () => {
+                    group.forEach(s => s.classList.remove('span-line-hover'));
+                });
+                span.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+
+                    // Ordenar por X para el rango coherente
+                    group.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
+
+                    range.setStartBefore(group[0]);
+                    range.setEndAfter(group[group.length - 1]);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+
+                    handleTextSelection(e);
+                });
+            });
+        });
+    });
+}
+
+async function highlightPdfReference(pageNum, textSnippet = "") {
+    // 1. Soporte para Vista HTML (E-book) si no hay pdfDocument
+    if (!pdfDocument && pdfTextByPage.length > 0) {
+        if (!isHtmlView) {
+            isHtmlView = true;
+            await renderPage(pageNum);
+            updatePageNavigation();
+        } else if (pageNum && pageNum !== currentPage) {
+            currentPage = pageNum;
+            await renderPage(currentPage);
+            updatePageNavigation();
+        }
+
+        if (textSnippet) {
+            // Intentar resaltar en el cuerpo del e-book
+            setTimeout(() => {
+                const body = document.getElementById('ebookContentBody');
+                if (body) {
+                    const ps = body.querySelectorAll('p');
+                    const cleanSnippet = textSnippet.replace(/\s+/g, ' ').trim().toLowerCase();
+
+                    for (let p of ps) {
+                        if (p.textContent.toLowerCase().includes(cleanSnippet)) {
+                            // Limpiar resaltado anterior si hay
+                            body.querySelectorAll('.ebook-highlight').forEach(el => el.classList.remove('ebook-highlight'));
+
+                            p.classList.add('ebook-highlight');
+                            p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            break;
+                        }
+                    }
+                }
+            }, 300);
+        }
+        return;
+    }
+
+    if (!pdfDocument) return;
+
+    // 1. Desactivar vista HTML si está activa para ver el canvas y el resaltado
+    if (isHtmlView) {
+        isHtmlView = false;
+        await renderPage(pageNum);
+        updatePageNavigation();
+    } else if (pageNum && pageNum !== currentPage) {
+        // 2. Cambiar a la página especificada
         currentPage = pageNum;
-        renderPage(currentPage);
+        await renderPage(currentPage);
         updatePageNavigation();
     }
 
-    // Aquí se podría implementar highlighting visual del texto
-    // Por ahora, solo cambiamos de página
-    console.log(`Referencia: Página ${pageNum}`, textSnippet);
+    if (!textSnippet) return;
+
+    // 3. Buscar texto y resaltar
+    try {
+        const page = await pdfDocument.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const viewer = document.getElementById('pdfViewer');
+        const highlightLayer = document.getElementById(`highlight-layer-${pageNum}`);
+
+        if (!highlightLayer) return;
+        highlightLayer.innerHTML = ''; // Limpiar anteriores
+
+        // Usar el viewport almacenado para consistencia con el TextLayer
+        let scaledViewport;
+        const storedViewport = pageViewports[pageNum];
+        if (storedViewport) {
+            scaledViewport = storedViewport.viewport;
+        } else {
+            // Fallback: recalcular si no está almacenado
+            console.warn(`No viewport stored for page ${pageNum}, using fallback`);
+            const containerWidth = viewer.clientWidth - 40;
+            const containerHeight = viewer.clientHeight - 40;
+            const viewport = page.getViewport({ scale: 1.0 });
+            const scaleX = Math.max(containerWidth, 300) / viewport.width;
+            const scaleY = Math.max(containerHeight, 400) / viewport.height;
+            const scale = Math.min(scaleX, scaleY) * currentZoom; // Sin límite de 1.5
+            scaledViewport = page.getViewport({ scale: scale });
+        }
+
+        // Normalizar snippet para búsqueda
+        const cleanSnippet = textSnippet.replace(/\s+/g, ' ').trim().toLowerCase();
+
+        const items = textContent.items;
+        let firstMatch = null;
+
+        items.forEach(item => {
+            const itemText = item.str.replace(/\s+/g, ' ').trim().toLowerCase();
+            // Match si el item contiene el snippet o viceversa (para fragmentos partidos)
+            if (itemText.includes(cleanSnippet) || (cleanSnippet.length > 5 && cleanSnippet.includes(itemText))) {
+                // [a, b, c, d, e, f] -> e=x, f=y
+                const pdfRect = [
+                    item.transform[4],
+                    item.transform[5],
+                    item.transform[4] + item.width,
+                    item.transform[5] + item.height
+                ];
+                const viewportRect = scaledViewport.convertToViewportRectangle(pdfRect);
+
+                const rect = document.createElement('div');
+                rect.className = 'pdf-highlight';
+                rect.style.left = `${viewportRect[0]}px`;
+                rect.style.top = `${viewportRect[1]}px`;
+                rect.style.width = `${viewportRect[2] - viewportRect[0]}px`;
+                rect.style.height = `${viewportRect[3] - viewportRect[1]}px`;
+
+                highlightLayer.appendChild(rect);
+                if (!firstMatch) firstMatch = rect;
+            }
+        });
+
+        // Scroll suave al primer match encontrado
+        if (firstMatch) {
+            setTimeout(() => {
+                firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
+    } catch (e) {
+        console.error("Error al resaltar referencia:", e);
+    }
 }
 
 // ============================================================================
@@ -1287,14 +1620,14 @@ function renderAIMessageWithReferences(content, showSavedIndicator = false, save
 
     // 2) Fallback heurístico si el modelo no devolvió referencias
     let fallbackPages = [];
-    if (refs.length === 0 && pdfDocument && pdfTextByPage.length > 0) {
-        const responseWords = reply.toLowerCase().split(' ');
+    if (refs.length === 0 && pdfTextByPage.length > 0) {
+        const responseWords = reply.toLowerCase().split(/\s+/);
         const relevantPages = [];
 
         pdfTextByPage.forEach(pageData => {
             const pageWords = pageData.text.toLowerCase();
-            const matches = responseWords.filter(word => word.length > 3 && pageWords.includes(word));
-            if (matches.length > 0) relevantPages.push({ page: pageData.page, matches: matches.length });
+            const matches = responseWords.filter(word => word.length > 4 && pageWords.includes(word));
+            if (matches.length > 2) relevantPages.push({ page: pageData.page, matches: matches.length });
         });
 
         fallbackPages = relevantPages
@@ -2028,6 +2361,9 @@ async function createNewChat() {
     currentPage = 1;
     totalPages = 0;
 
+    // LIMPIAR: Eliminar viewports almacenados
+    Object.keys(pageViewports).forEach(key => delete pageViewports[key]);
+
     // Limpiar UI del PDF
     const pdfStatus = document.getElementById('pdfStatus');
     if (pdfStatus) {
@@ -2616,6 +2952,9 @@ async function deleteChat(chatId) {
             pdfTextByPage = [];
             pdfDocument = null;
 
+            // LIMPIAR: Eliminar viewports almacenados
+            Object.keys(pageViewports).forEach(key => delete pageViewports[key]);
+
             // Limpiar UI del PDF
             const pdfStatus = document.getElementById('pdfStatus');
             if (pdfStatus) {
@@ -2767,6 +3106,9 @@ async function loadChat(chatId) {
             pdfTextByPage = [];
             pdfDocument = null;
             isHtmlView = false;
+
+            // LIMPIAR: Eliminar viewports almacenados
+            Object.keys(pageViewports).forEach(key => delete pageViewports[key]);
 
             // Actualizar UI del PDF
             const pdfStatus = document.getElementById('pdfStatus');
