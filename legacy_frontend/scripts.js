@@ -36,11 +36,11 @@ const DISABLE_QUOTA = true; // Temporal para testing
 let pdfText = "";
 let pdfContextForAI = ""; // Contexto con marcadores por página para referencias
 let pdfTextByPage = []; // Array para almacenar texto por página
-let isHtmlView = false; // Indica si se está usando vista HTML (historial) o Canvas (nuevo upload)
+// isHtmlView removed
 let pdfDocument = null;
 let currentPage = 1;
 let totalPages = 0;
-let currentZoom = 2.0; // Zoom inicial al 200% para mejor visualización del selector de texto
+let currentZoom = 1.0; // Zoom inicial al 100% estándar
 let history = [];
 let quotaInterval = null;
 
@@ -1113,244 +1113,434 @@ async function handlePdfUpload(input) {
 
     } catch (e) {
         document.getElementById('pdfStatus').innerHTML = '<span class="material-icons-round text-red-500 text-xs">warning</span> Error al procesar el PDF';
-        console.error("PDF Error Extendido:", e);
         alert("Error al procesar el PDF: " + (e.message || "Verifica que sea un archivo válido."));
     }
 }
+
+// ============================================================================
+// SMART SELECTION & OCR MANAGER
+// ============================================================================
+
+class SmartSelectionManager {
+    constructor() {
+        this.menu = null;
+        this.activeSelection = null;
+        this.isOCRProcessing = false;
+
+        // Bind events
+        document.addEventListener('selectionchange', () => this.handleSelectionChange());
+        document.addEventListener('mousedown', (e) => this.handleOutsideClick(e));
+        window.addEventListener('resize', () => this.hideMenu());
+    }
+
+    handleSelectionChange() {
+        const selection = window.getSelection();
+
+        // Ignore if valid selection is empty or processing OCR
+        if (selection.isCollapsed || this.isOCRProcessing) {
+            // Delay hiding to allow clicks on the menu itself
+            return;
+        }
+
+        // Debounce menu show
+        if (this.debounceTimer) clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+            const text = selection.toString().trim();
+            if (text.length > 2) {
+                this.showMenu(selection);
+            }
+        }, 500);
+    }
+
+    handleOutsideClick(e) {
+        if (this.menu && !this.menu.contains(e.target)) {
+            // Check if clicking inside selection (browser handles this, but good to ensure)
+            const selection = window.getSelection();
+            if (selection.isCollapsed) {
+                this.hideMenu();
+            }
+        }
+    }
+
+    showMenu(selection, overrideRect = null) {
+        this.hideMenu(); // Clear existing
+
+        const range = selection.getRangeAt(0);
+        const rect = overrideRect || range.getBoundingClientRect();
+        const text = selection.toString().trim();
+
+        this.activeSelection = text;
+
+        // Create Menu
+        this.menu = document.createElement('div');
+        this.menu.className = 'smart-selection-menu';
+
+        // Actions
+        this.menu.innerHTML = `
+            <div class="smart-menu-actions">
+                <button class="smart-btn" data-action="explain">Explicar</button>
+                <button class="smart-btn" data-action="summarize">Resumir</button>
+                <button class="smart-btn" data-action="rewrite">Reescribir</button>
+            </div>
+            <div class="smart-menu-tools">
+                <div class="color-dots">
+                    <div class="color-dot dot-red" title="Importante"></div>
+                    <div class="color-dot dot-yellow" title="Revisar"></div>
+                    <div class="color-dot dot-green" title="Aprobado"></div>
+                    <div class="color-dot dot-blue" title="Nota"></div>
+                </div>
+                <div class="tool-actions">
+                    <button class="icon-btn" data-action="copy" title="Copiar"><span class="material-icons-round text-[14px]">content_copy</span></button>
+                    <button class="icon-btn" data-action="ask" title="Preguntar"><span class="material-icons-round text-[14px]">chat_bubble_outline</span></button>
+                </div>
+            </div>
+        `;
+
+        // Bind clicks
+        this.menu.querySelectorAll('[data-action]').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this.executeAction(btn.dataset.action, text);
+            };
+        });
+
+        document.body.appendChild(this.menu);
+
+        // Position Menu
+        const menuRect = this.menu.getBoundingClientRect();
+        let top = rect.top + window.scrollY - menuRect.height - 10;
+        let left = rect.left + window.scrollX + (rect.width / 2) - (menuRect.width / 2);
+
+        // Boundary checks
+        if (top < 0) top = rect.bottom + window.scrollY + 10;
+        if (left < 10) left = 10;
+        if (left + menuRect.width > window.innerWidth) left = window.innerWidth - menuRect.width - 10;
+
+        this.menu.style.top = `${top}px`;
+        this.menu.style.left = `${left}px`;
+    }
+
+    hideMenu() {
+        if (this.menu) {
+            this.menu.remove();
+            this.menu = null;
+        }
+    }
+
+    executeAction(action, text) {
+        const userInput = document.getElementById('userInput');
+        if (!userInput) return;
+
+        let prompt = "";
+        switch (action) {
+            case 'explain': prompt = `Explica este texto: "${text}"`; break;
+            case 'summarize': prompt = `Resume este fragmento: "${text}"`; break;
+            case 'rewrite': prompt = `Reescribe esto de forma más académica: "${text}"`; break;
+            case 'ask': prompt = `Sobre: "${text}"... `; break;
+            case 'copy':
+                navigator.clipboard.writeText(text);
+                showToast("Texto copiado al portapapeles", "success");
+                this.hideMenu();
+                return;
+        }
+
+        userInput.value = prompt;
+        userInput.focus();
+        this.hideMenu();
+
+        // Scroll to chat input
+        userInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // OCR FUNCTIONALITY
+    async triggerOCR(rect, canvas, viewport) {
+        this.isOCRProcessing = true;
+
+        // Show loading overlay on the specific area
+        const overlay = document.createElement('div');
+        overlay.className = 'ocr-loading-overlay';
+        overlay.innerHTML = '<span class="material-icons-round animate-spin">sync</span><span>Leyendo...</span>';
+        overlay.style.top = `${rect.top}px`;
+        overlay.style.left = `${rect.left}px`;
+        overlay.style.width = `${rect.width}px`;
+        overlay.style.height = `${rect.height}px`;
+
+        const layer = canvas.parentElement.querySelector('.ocr-layer');
+        if (layer) layer.appendChild(overlay);
+
+        try {
+            // Crop canvas
+            const cropCanvas = document.createElement('canvas');
+            // Convert viewport rect to canvas coordinates
+            // Note: rect is in DOM pixels, canvas is in high DPI potentially
+            // Simple mapping: 
+            // The canvas logic in renderPage sets canvas.width/height to viewport.width/height (scaled)
+            // So we can map directly if we use the layer's local coordinates.
+
+            cropCanvas.width = rect.width;
+            cropCanvas.height = rect.height;
+            const ctx = cropCanvas.getContext('2d');
+
+            // Draw cropped image
+            ctx.drawImage(
+                canvas,
+                rect.left, rect.top, rect.width, rect.height,
+                0, 0, rect.width, rect.height
+            );
+
+            const dataUrl = cropCanvas.toDataURL('image/png');
+
+            // Run Tesseract
+            showToast("Procesando imagen con IA...", "info");
+            const { data: { text } } = await Tesseract.recognize(dataUrl, 'spa', {
+                // logger: m => console.log(m)
+            });
+
+            if (text.trim().length === 0) {
+                showToast("No se detectó texto legible.", "error");
+            } else {
+                // Manually trigger menu with the text
+                // Mock selection object logic or just show menu directly
+                showToast("Texto detectado con éxito", "success");
+
+                // Create a fake selection range for positioning
+                const fakeRange = {
+                    getBoundingClientRect: () => {
+                        const canvasRect = canvas.getBoundingClientRect();
+                        return {
+                            top: canvasRect.top + rect.top,
+                            left: canvasRect.left + rect.left,
+                            width: rect.width,
+                            height: rect.height,
+                            bottom: canvasRect.top + rect.top + rect.height,
+                            right: canvasRect.left + rect.left + rect.width
+                        };
+                    }
+                };
+
+                // Hack: Override window.getSelection().toString() behavior isn't possible directly easily
+                // So we'll call showMenu but pass the text explicitly by setting it on the instance temporarily
+                // Wait, showMenu gets text from window.getSelection(). We need to refactor showMenu slightly or just pass text.
+                // Refactored showMenu above takes a text argument? No, it gets it from selection.
+                // Let's modify showMenu to accept text override.
+
+                // RE-READ showMenu -> it takes selection object.
+                // I will modify showMenu to accept text override.
+
+                this.showOCRMenu(text, fakeRange);
+            }
+
+        } catch (e) {
+            console.error("OCR Error:", e);
+            showToast("Error en reconocimiento de texto.", "error");
+        } finally {
+            overlay.remove();
+            this.isOCRProcessing = false;
+        }
+    }
+
+    showOCRMenu(text, rangeProvider) {
+        this.hideMenu();
+        this.activeSelection = text;
+
+        // Reuse creation logic... but easier just to use the same logic
+        // Create Menu (Duplicated for simplicity or I could extract method)
+        this.menu = document.createElement('div');
+        this.menu.className = 'smart-selection-menu';
+
+        this.menu.innerHTML = `
+            <div class="smart-menu-actions">
+                <button class="smart-btn" data-action="explain">Explicar</button>
+                <button class="smart-btn" data-action="summarize">Resumir</button>
+                <button class="smart-btn" data-action="rewrite">Reescribir</button>
+            </div>
+            <div class="smart-menu-tools">
+                <div class="tool-actions" style="margin: 0 auto;">
+                    <button class="icon-btn" data-action="copy" title="Copiar"><span class="material-icons-round text-[14px]">content_copy</span></button>
+                    <button class="icon-btn" data-action="ask" title="Preguntar"><span class="material-icons-round text-[14px]">chat_bubble_outline</span></button>
+                </div>
+            </div>
+        `;
+
+        this.menu.querySelectorAll('[data-action]').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this.executeAction(btn.dataset.action, text);
+            };
+        });
+
+        document.body.appendChild(this.menu);
+
+        const rect = rangeProvider.getBoundingClientRect();
+        const menuRect = this.menu.getBoundingClientRect();
+        let top = rect.top + window.scrollY - menuRect.height - 10;
+        let left = rect.left + window.scrollX + (rect.width / 2) - (menuRect.width / 2);
+
+        if (top < 0) top = rect.bottom + window.scrollY + 10;
+        this.menu.style.top = `${top}px`;
+        this.menu.style.left = `${left}px`;
+    }
+}
+
+// Global Instance
+const smartSelection = new SmartSelectionManager();
+
 
 async function renderPage(pageNum) {
     const viewer = document.getElementById('pdfViewer');
     if (!viewer) return;
 
-    if (isHtmlView) {
-        // RENDERIZADO HTML (Para historial) - MODO E-BOOK
-        const pageData = pdfTextByPage.find(p => p.page === pageNum);
-        if (pageData) {
-            // Calcular tamaño de fuente basado en el zoom (base 16px)
-            const fontSize = Math.max(12, Math.min(32, 16 * currentZoom));
-
-            viewer.classList.add('ebook-mode');
-            viewer.innerHTML = `
-                <div class="ebook-reader animate-fadeIn">
-                    <div class="mb-3 pb-2 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center text-primary">
-                        <span class="text-[11px] font-black uppercase tracking-[0.1em] whitespace-nowrap">Lectura Inteligente</span>
-                        <span class="text-[10px] font-bold text-accent whitespace-nowrap">PÁGINA ${pageNum} / ${totalPages}</span>
-                    </div>
-                    
-                    <div class="ebook-content" id="ebookContentBody" style="font-size: ${fontSize}px;"></div>
-
-                    <div class="reader-notice mt-8">
-                        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <span class="material-icons-round text-primary text-[20px]">auto_awesome</span>
-                        </div>
-                        <p class="text-[11px] leading-relaxed text-slate-600">
-                            <strong>Tip:</strong> Puedes usar los botones de lupa (+/-) de abajo para ajustar el tamaño de letra a tu gusto.
-                        </p>
-                    </div>
-                </div>
-            `;
-
-            const contentBody = document.getElementById('ebookContentBody');
-            if (contentBody && pageData.text) {
-                // Dividir por saltos de línea y limpiar líneas vacías
-                const paragraphs = pageData.text.split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0);
-
-                contentBody.innerHTML = paragraphs
-                    .map(line => `<p>${sanitizeHTML(line)}</p>`)
-                    .join('') || '<p class="opacity-40 italic">Contenido extraído vacío.</p>';
-            }
-
-            viewer.scrollTop = 0;
-
-            const sidebar = viewer.closest('aside') || viewer.parentElement;
-            if (sidebar) sidebar.scrollTop = 0;
-        }
-        return;
-    }
-
     viewer.classList.remove('ebook-mode');
-
-    // RENDERIZADO CANVAS (Para PDF original)
-    if (!pdfDocument) return;
-
+    // Standard PDF Rendering (Reverted to strict 1:1 precision)
     try {
         const page = await pdfDocument.getPage(pageNum);
+
+        let viewport = page.getViewport({ scale: 1.0 });
+
+        // Auto-Zoom (Fit to Width) Logic
+        // If currentZoom is effectively "auto" or we want to enforce fit-to-width
+        // We calculate what scale makes the viewport match the container width.
+        const container = document.getElementById('pdfViewerContainer');
+        if (container) {
+            // Subtract padding (approx 40px) from container width
+            const availableWidth = container.clientWidth - 48;
+            const fitScale = availableWidth / viewport.width;
+
+            // Only update global zoom if this is the first page render or explicit fit request
+            // For now, we sync currentZoom to this fitScale if it's the "initial" load state
+            if (currentZoom === 1.0) { // Assuming 1.0 was the placeholder for "default"
+                currentZoom = parseFloat(fitScale.toFixed(2));
+            }
+        }
+
+        // Apply finalized zoom
+        viewport = page.getViewport({ scale: currentZoom });
+
+        // Update global tracker
+        pageViewports[pageNum] = { viewport, scale: currentZoom };
+
+        // Create Canvas
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
 
-        // Calcular escala para ajustar al contenedor
-        const containerWidth = viewer.clientWidth - 40; // Padding
-        const containerHeight = viewer.clientHeight - 40;
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-        const viewport = page.getViewport({ scale: 1.0 });
-
-        // Validar dimensiones para evitar división por cero o NaN
-        const safeWidth = Math.max(containerWidth, 300);
-        const safeHeight = Math.max(containerHeight, 400);
-
-        const scaleX = safeWidth / viewport.width;
-        const scaleY = safeHeight / viewport.height;
-        // Remover límite de 1.5 para permitir zoom completo
-        const scale = Math.min(scaleX, scaleY) * currentZoom;
-
-        const scaledViewport = page.getViewport({ scale: scale });
-
-        // GUARDAR: Almacenar el viewport para uso posterior en resaltados
-        pageViewports[pageNum] = {
-            viewport: scaledViewport,
-            scale: scale,
-            containerWidth: containerWidth,
-            containerHeight: containerHeight
-        };
-
-        canvas.height = scaledViewport.height;
-        canvas.width = scaledViewport.width;
-
-        const renderContext = {
-            canvasContext: context,
-            viewport: scaledViewport
-        };
-
-        await page.render(renderContext).promise;
-
-        // --- MEJORA: CAPAS INTERACTIVAS ---
+        // Container (Matches Viewport Exactly)
         const pageContainer = document.createElement('div');
         pageContainer.className = 'pdf-page-container';
-        pageContainer.style.width = `${scaledViewport.width}px`;
-        pageContainer.style.height = `${scaledViewport.height}px`;
+        pageContainer.style.width = `${viewport.width}px`;
+        pageContainer.style.height = `${viewport.height}px`;
+        pageContainer.style.position = 'relative';
 
-        // Capa de resaltado (vacía al inicio)
+        // Layers
         const highlightLayer = document.createElement('div');
         highlightLayer.className = 'highlight-layer';
         highlightLayer.id = `highlight-layer-${pageNum}`;
 
-        // Capa de texto (PDF.js textLayer)
         const textLayerDiv = document.createElement('div');
         textLayerDiv.className = 'textLayer';
-        // Asegurar que la capa de texto coincida exactamente con el viewport
-        textLayerDiv.style.width = `${scaledViewport.width}px`;
-        textLayerDiv.style.height = `${scaledViewport.height}px`;
+        textLayerDiv.style.width = `${viewport.width}px`;
+        textLayerDiv.style.height = `${viewport.height}px`;
+        // STANDARD CSS - No transforms. Relies on styles.css opacity/pointer-events.
 
-        const textContent = await page.getTextContent({
-            disableCombineTextItems: true
-        });
+        const ocrLayer = document.createElement('div');
+        ocrLayer.className = 'ocr-layer';
+        ocrLayer.title = "Arrastra para seleccionar texto de imagen";
 
-        const textLayerPromise = pdfjsLib.renderTextLayer({
-            textContentSource: textContent,
-            container: textLayerDiv,
-            viewport: scaledViewport,
-            textDivs: [],
-            fontDeclarationStyleElement: null,
-            enhanceTextSelection: true
-        });
+        const textContent = await page.getTextContent();
 
-        // Limpiar visor y construir estructura
+        // RENDER TEXT LAYER
+        if (textContent.items.length > 0) {
+            await pdfjsLib.renderTextLayer({
+                textContentSource: textContent,
+                container: textLayerDiv,
+                viewport: viewport,
+                textDivs: [],
+            }).promise;
+        } else {
+            // Image-only page
+            ocrLayer.style.zIndex = 5;
+            setupOCRInteraction(ocrLayer, canvas, viewport);
+        }
+
         viewer.innerHTML = '';
         pageContainer.appendChild(canvas);
         pageContainer.appendChild(highlightLayer);
+        pageContainer.appendChild(ocrLayer);
         pageContainer.appendChild(textLayerDiv);
         viewer.appendChild(pageContainer);
 
-        // --- CONFIGURACIÓN DE SELECCIÓN NATIVA ---
-        await textLayerPromise;
-        setupNativeSelection(textLayerDiv, scaledViewport);
-
-        // Centrar el contenedor
         pageContainer.style.display = 'block';
         pageContainer.style.margin = '20px auto';
 
-        // Escuchar selección de texto manual
-        textLayerDiv.addEventListener('mouseup', handleTextSelection);
+        // Update Zoom Display
+        const zoomLabel = document.getElementById('zoomLevel');
+        if (zoomLabel) zoomLabel.textContent = `${Math.round(currentZoom * 100)}%`;
 
     } catch (e) {
         console.error('Error rendering page:', e);
     }
 }
 
-// Global para rastrear el menú de selección activo
-let activeSelectionMenu = null;
+function setupOCRInteraction(layer, canvas, viewport) {
+    let startX, startY, isDragging = false;
+    let selectionBox = null;
 
-function handleTextSelection(e) {
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
+    layer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = layer.getBoundingClientRect();
+        startX = e.clientX - rect.left;
+        startY = e.clientY - rect.top;
 
-    // Eliminar menú anterior si existe
-    if (activeSelectionMenu) {
-        activeSelectionMenu.remove();
-        activeSelectionMenu = null;
-    }
+        // Remove old box
+        const old = layer.querySelector('.ocr-selection-box');
+        if (old) old.remove();
 
-    if (selectedText.length > 5) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
+        selectionBox = document.createElement('div');
+        selectionBox.className = 'ocr-selection-box';
+        selectionBox.style.left = `${startX}px`;
+        selectionBox.style.top = `${startY}px`;
+        layer.appendChild(selectionBox);
+    });
 
-        // Obtener el contenedor del PDF
-        const pdfViewer = document.getElementById('pdfViewer');
-        if (!pdfViewer) return;
+    layer.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const rect = layer.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
 
-        const viewerRect = pdfViewer.getBoundingClientRect();
+        const width = currentX - startX;
+        const height = currentY - startY;
 
-        // Calcular posición relativa al contenedor (considerando scroll)
-        const relativeTop = rect.top - viewerRect.top + pdfViewer.scrollTop;
-        const relativeLeft = rect.left - viewerRect.left + pdfViewer.scrollLeft;
+        selectionBox.style.width = `${Math.abs(width)}px`;
+        selectionBox.style.height = `${Math.abs(height)}px`;
+        selectionBox.style.left = `${width < 0 ? currentX : startX}px`;
+        selectionBox.style.top = `${height < 0 ? currentY : startY}px`;
+    });
 
-        const menu = document.createElement('div');
-        menu.className = 'selection-menu';
+    layer.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
 
-        // Dimensiones aproximadas del menú para validación de límites
-        const menuHeight = 45;
-        const menuWidth = 200;
+        // Capture rect
+        if (selectionBox) {
+            const rect = {
+                left: parseFloat(selectionBox.style.left),
+                top: parseFloat(selectionBox.style.top),
+                width: parseFloat(selectionBox.style.width),
+                height: parseFloat(selectionBox.style.height)
+            };
 
-        // Ajustar si se sale por arriba
-        let finalTop = relativeTop - menuHeight;
-        if (finalTop < pdfViewer.scrollTop) {
-            // Si no hay espacio arriba, colocar debajo del texto
-            finalTop = relativeTop + rect.height + 10;
+            if (rect.width > 20 && rect.height > 20) {
+                smartSelection.triggerOCR(rect, canvas, viewport);
+            } else {
+                selectionBox.remove();
+            }
         }
 
-        // Ajustar si se sale por los lados
-        let finalLeft = relativeLeft + rect.width / 2;
-        const maxLeft = pdfViewer.scrollWidth - menuWidth / 2;
-        const minLeft = menuWidth / 2;
-        finalLeft = Math.max(minLeft, Math.min(maxLeft, finalLeft));
-
-        // Posicionar relativo al contenedor
-        menu.style.top = `${finalTop}px`;
-        menu.style.left = `${finalLeft}px`;
-        menu.style.transform = 'translateX(-50%)';
-
-        const btn = document.createElement('button');
-        btn.innerHTML = '<span class="material-icons-round" style="font-size:16px">chat</span> Preguntar sobre esto';
-        btn.onclick = () => {
-            const userInput = document.getElementById('userInput');
-            if (userInput) {
-                userInput.value = `Sobre el fragmento: "${selectedText}"... `;
-                userInput.focus();
-                // Colocar cursor al final
-                userInput.selectionStart = userInput.selectionEnd = userInput.value.length;
-                menu.remove();
-                activeSelectionMenu = null;
-            }
-        };
-
-        menu.appendChild(btn);
-
-        // Adjuntar al contenedor PDF en lugar de body
-        pdfViewer.appendChild(menu);
-        activeSelectionMenu = menu;
-
-        // Cerrar menú al hacer clic fuera
-        const closeMenu = (event) => {
-            if (!menu.contains(event.target)) {
-                menu.remove();
-                activeSelectionMenu = null;
-                document.removeEventListener('mousedown', closeMenu);
-            }
-        };
-        setTimeout(() => document.addEventListener('mousedown', closeMenu), 10);
-    }
+    });
 }
 
 function updatePageNavigation() {
@@ -1380,11 +1570,8 @@ async function changePage(delta) {
 async function zoomPDF(delta) {
     currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
 
-    // Cerrar menú de selección activo antes de re-renderizar
-    if (activeSelectionMenu) {
-        activeSelectionMenu.remove();
-        activeSelectionMenu = null;
-    }
+    // Cerrar menú de selección activo
+    if (smartSelection) smartSelection.hideMenu();
 
     // Si estamos en vista HTML, llamar a renderPage para actualizar el tamaño de fuente
     if (isHtmlView) {
@@ -1397,83 +1584,6 @@ async function zoomPDF(delta) {
     updatePageNavigation();
 }
 
-// --- FUNCIONES DE SOPORTE PARA SELECCIÓN NATIVA ---
-
-function setupNativeSelection(textLayerDiv, viewport) {
-    const spans = Array.from(textLayerDiv.querySelectorAll('span'));
-    if (spans.length === 0) return;
-
-    // 1. Agrupar spans por su posición vertical (líneas)
-    const linesMap = new Map();
-    const tolerance = 2; // Píxeles de tolerancia
-
-    spans.forEach(span => {
-        const top = parseFloat(span.style.top);
-        let found = false;
-        for (const [y, lineSpans] of linesMap.entries()) {
-            if (Math.abs(y - top) < tolerance) {
-                lineSpans.push(span);
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            linesMap.set(top, [span]);
-        }
-    });
-
-    // 2. Procesar cada línea para aplicar eventos y manejar columnas
-    const xGapTolerance = viewport.width * 0.1; // 10% del ancho para detectar columnas
-
-    linesMap.forEach((lineSpans, y) => {
-        lineSpans.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
-
-        // Sub-agrupar por columnas si hay huecos grandes
-        let currentGroup = [lineSpans[0]];
-        const groups = [currentGroup];
-
-        for (let i = 1; i < lineSpans.length; i++) {
-            const current = lineSpans[i];
-            const prev = lineSpans[i - 1];
-            const currentX = parseFloat(current.style.left);
-            const prevX = parseFloat(prev.style.left) + prev.offsetWidth;
-
-            if (currentX - prevX > xGapTolerance) {
-                currentGroup = [current];
-                groups.push(currentGroup);
-            } else {
-                currentGroup.push(current);
-            }
-        }
-
-        // Aplicar eventos a cada grupo (línea dentro de una columna)
-        groups.forEach(group => {
-            group.forEach(span => {
-                span.addEventListener('mouseenter', () => {
-                    group.forEach(s => s.classList.add('span-line-hover'));
-                });
-                span.addEventListener('mouseleave', () => {
-                    group.forEach(s => s.classList.remove('span-line-hover'));
-                });
-                span.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const selection = window.getSelection();
-                    const range = document.createRange();
-
-                    // Ordenar por X para el rango coherente
-                    group.sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left));
-
-                    range.setStartBefore(group[0]);
-                    range.setEndAfter(group[group.length - 1]);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-
-                    handleTextSelection(e);
-                });
-            });
-        });
-    });
-}
 
 async function highlightPdfReference(pageNum, textSnippet = "") {
     // 1. Soporte para Vista HTML (E-book) si no hay pdfDocument

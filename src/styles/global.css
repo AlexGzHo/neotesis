@@ -1,0 +1,1052 @@
+@import "tailwindcss";
+@import './variables.css';
+
+@theme {
+    --color-primary: var(--primary);
+    --color-primary-light: #1e293b;
+    --color-accent: #2563eb;
+    --color-accent-hover: #1d4ed8;
+    --color-bg-light: #f8fafc;
+    --color-border: #e2e8f0;
+    --color-gray: #64748b;
+
+    --shadow-glow: 0 10px 15px -3px rgba(37, 99, 235, 0.15);
+    --shadow-modal: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+    --shadow-premium: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.animate-slideUp {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #fcfdfe;
+    color: var(--text-main);
+    overflow-x: hidden;
+}
+
+/* Scrollbars personalizados Dashboard */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+/* Material Icons Refinement */
+.material-icons-round {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Chat Item Logic */
+.chat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.chat-item:hover {
+    background-color: #f8fafc;
+    color: var(--text-main);
+    transform: translateX(4px);
+}
+
+.dark .chat-item:hover {
+    background-color: #1e293b;
+}
+
+.chat-item.active {
+    background-color: #eff6ff;
+    color: var(--primary);
+    box-shadow: inset 4px 0 0 var(--primary);
+    border-radius: 0 0.75rem 0.75rem 0;
+    margin-left: -12px;
+    padding-left: 24px;
+}
+
+.dark .chat-item.active {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* PDF Page Cards */
+.pdf-page-card {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 0.5rem;
+    width: 100%;
+    aspect-ratio: 1 / 1.41;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.pdf-page-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.pdf-page-card.active {
+    border: 2px solid var(--primary);
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1);
+}
+
+/* Message Bubbles Refinement */
+.chat-message-bubble {
+    padding: 1rem 1.25rem;
+    border-radius: 1.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    max-width: 85%;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.ai-bubble {
+    background-color: var(--bg-ai);
+    color: var(--text-main);
+    border: none;
+    border-top-left-radius: 0.25rem;
+    box-shadow: none;
+}
+
+.message-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text-label);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.user-label {
+    text-align: right;
+    margin-right: 12px;
+}
+
+.ai-label {
+    margin-left: 12px;
+}
+
+.message-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.dark .ai-bubble {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
+.user-bubble {
+    background-color: var(--bg-user);
+    color: white;
+    border-top-right-radius: 0.25rem;
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.2);
+}
+
+/* Chat Input Area Refinement */
+.chat-input-container {
+    background: white;
+    border: 1px solid var(--border-medium);
+    border-radius: 1.25rem;
+    padding: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+}
+
+.chat-input-container:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1), 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Floating Input Placeholder styles */
+textarea::placeholder {
+    color: #94a3b8;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Chat Background Texture */
+#chatMessages {
+    background-color: #ffffff;
+}
+
+.dark #chatMessages {
+    background-color: #0f172a;
+    background-image: radial-gradient(#1e293b 1px, transparent 1px);
+}
+
+/* PDF Reference Tag Refinement */
+.pdf-reference {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: white;
+    border: 1px solid var(--border-medium);
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    margin-top: 0.25rem;
+}
+
+.pdf-reference:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background-color: #eff6ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
+}
+
+.pdf-reference i,
+.pdf-reference span {
+    font-size: 14px;
+}
+
+/* Quota Progress Bar Refinement */
+#quotaBar {
+    background: linear-gradient(90deg, var(--primary), #60a5fa);
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+}
+
+/* Visibility Classes for Navigation */
+.page-section {
+    display: none;
+}
+
+.page-section.active {
+    display: block;
+}
+
+.page-section.active.animate-fadeIn {
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+
+/* Mobile Navigation Bar */
+.mobile-navigation {
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    .pdf-chat-layout {
+        flex-direction: column !important;
+        position: relative !important;
+    }
+
+    /* Vista por defecto: Chat visible, PDF oculto */
+    #pdfViewerSidebar {
+        display: none !important;
+    }
+
+    /* Cuando estamos en vista PDF */
+    .mobile-pdf-active #pdfViewerSidebar {
+        display: flex !important;
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 30 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: white !important;
+    }
+
+    /* Estilos para el botón de toggle activo */
+    #viewToggleBtn.active {
+        background-color: var(--primary);
+        color: white !important;
+    }
+
+    section#chatPanelMain {
+        width: 100% !important;
+        display: flex !important;
+    }
+
+    .visible-mobile {
+        display: flex !important;
+    }
+
+    .hidden-mobile {
+        display: none !important;
+    }
+
+    /* Main Navigation Mobile Styles */
+    nav.mobile-open ul {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed;
+        top: 80px;
+        /* Below header */
+        right: 20px;
+        width: 240px;
+        height: auto;
+        max-height: calc(100vh - 100px);
+        background: white;
+        z-index: 100;
+        padding: 20px;
+        gap: 10px;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        animation: slideInDown 0.3s ease-out;
+        border: 1px solid var(--border-medium);
+    }
+
+    nav.mobile-open ul li {
+        width: 100%;
+    }
+
+    nav.mobile-open ul li a {
+        display: block;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: #f8fafc;
+        width: 100%;
+        text-align: left;
+    }
+
+    nav.mobile-open ul li a::after {
+        display: none !important;
+    }
+
+    nav.mobile-open .nav-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(2px);
+        z-index: 90;
+    }
+
+    .nav-overlay {
+        display: none;
+    }
+
+    @keyframes slideInDown {
+        from {
+            transform: translateY(-10px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    #chatHistorySidebar {
+        position: fixed;
+        top: 73px;
+        /* Header height */
+        left: -288px;
+        /* Width (w-72 = 18rem = 288px) */
+        bottom: 0;
+        z-index: 40;
+        transition: left 0.3s ease;
+        box-shadow: 10px 0 15px -3px rgba(0, 0, 0, 0.1);
+        width: 288px !important;
+    }
+
+    #chatHistorySidebar.active {
+        left: 0;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 35;
+        backdrop-filter: blur(2px);
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    #chatMessages {
+        padding-bottom: 2rem !important;
+    }
+}
+
+/* E-book Reader View */
+.ebook-reader {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #fdfdfb;
+    color: #000000;
+    line-height: 1.6;
+    font-weight: 500;
+    padding: 0 1rem 2.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid #e5e7eb;
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.ebook-content p {
+    color: #000000 !important;
+    margin-bottom: 1.25rem;
+}
+
+@media (min-width: 640px) {
+    .ebook-reader {
+        padding: 1.5rem 2.5rem 3rem;
+        font-size: 1rem;
+        margin: 5px auto;
+    }
+}
+
+.reader-notice {
+    margin: 2rem auto 0;
+    padding: 1rem;
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    color: #1e40af;
+    max-width: 800px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.dark .ebook-reader {
+    background-color: #1a2234;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+.dark .reader-notice {
+    background: rgba(59, 130, 246, 0.1);
+    color: #93c5fd;
+    border-left-color: #3b82f6;
+}
+
+/* --- Toast Notifications System --- */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    min-width: 300px;
+    max-width: 400px;
+    background: white;
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastOut 0.4s 2.6s forwards;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.toast.success {
+    border-left: 4px solid #10b981;
+}
+
+.toast.error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast.info {
+    border-left: 4px solid #2563eb;
+}
+
+.toast-icon {
+    font-size: 24px;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-title {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.toast-message {
+    font-size: 0.8125rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+@keyframes toastIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toastOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(calc(100% + 40px));
+        opacity: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .toast-container {
+        top: auto;
+        bottom: 20px;
+        right: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        min-width: 0;
+        max-width: 100%;
+        animation: toastInMobile 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastOutMobile 0.4s 2.6s forwards;
+    }
+
+    @keyframes toastInMobile {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes toastOutMobile {
+        from {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+    }
+}
+
+/* --- Custom Confirmation Modal --- */
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.confirm-modal {
+    background: white;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: slideInDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+}
+
+.confirm-icon {
+    width: 64px;
+    height: 64px;
+    background: #fee2e2;
+    color: #ef4444;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.confirm-icon i {
+    font-size: 32px;
+}
+
+.confirm-modal h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 12px;
+}
+
+.confirm-modal p {
+    font-size: 0.9375rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-confirm {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-cancel {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-cancel:hover {
+    background: #e2e8f0;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3);
+}
+
+.dark .confirm-modal {
+    background: #1e293b;
+}
+
+.dark .confirm-modal h3 {
+    color: white;
+}
+
+.dark .confirm-modal p {
+    color: #94a3b8;
+}
+
+.dark .btn-cancel {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+
+/* --- Chat Options Dropdown Menu --- */
+.chat-options-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    min-width: 180px;
+    z-index: 1000;
+    animation: slideInDown 0.2s ease-out;
+    overflow: hidden;
+}
+
+.chat-options-menu.hidden {
+    display: none;
+}
+
+.chat-option-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    background: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.chat-option-item:hover {
+    background: #f8fafc;
+}
+
+.chat-option-item.text-red-600 {
+    color: #dc2626;
+}
+
+.chat-option-item.text-red-600:hover {
+    background: #fef2f2;
+}
+
+.chat-option-item i {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+
+/* --- Rename Input Styles --- */
+.rename-input {
+    width: 100%;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.rename-input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+
+/* ============================================================================
+   CHAT IA - MEJORAS DE LECTURA HTML (E-BOOK)
+   ============================================================================ */
+
+.ebook-reader {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border-radius: 1rem;
+    line-height: 1.8;
+    color: #334155;
+    transition: all 0.3s ease;
+}
+
+.ebook-content {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    text-align: justify;
+    hyphens: auto;
+    transition: font-size 0.2s ease;
+}
+
+.ebook-content p {
+    margin-bottom: 1.5rem;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* Sombras suaves para separar el contenido del fondo del visor */
+#pdfViewer.ebook-mode {
+    background-color: #f1f5f9;
+    padding: 2rem 1rem;
+}
+
+.reader-notice {
+    background: #f8fafc;
+    border-left: 4px solid #2563eb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 3rem;
+    animation: fadeIn 0.5s ease;
+}
+
+/* ============================================================================
+   CHAT IA - RESALTADO Y SELECCIÓN PDF
+   ============================================================================ */
+
+/* Contenedor relativo para alinear capas sobre el canvas */
+.pdf-page-container {
+    position: relative;
+    margin: 20px auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+}
+
+/* Capa de texto transparente pero seleccionable */
+.textLayer {
+    position: absolute;
+    text-align: initial;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 1;
+    /* Standard styling */
+    line-height: 1.0;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+    transform-origin: 0 0;
+    z-index: 5;
+    /* Ensure it is above everything else */
+    pointer-events: auto !important;
+    /* CRITICAL: Capture mouse events for selection */
+}
+
+/* --- SELECCIÓN NATIVA STANDARD --- */
+.textLayer span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    box-sizing: border-box;
+}
+
+/* Highlighting styles */
+.textLayer ::selection {
+    background: rgba(37, 99, 235, 0.3);
+    /* Blue selection */
+    color: transparent;
+    /* Keep text transparent */
+}
+
+.textLayer span.span-line-hover {
+    background: rgba(37, 99, 235, 0.08) !important;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.textLayer ::selection {
+    background: rgba(37, 99, 235, 0.35) !important;
+    /* Azul profesional translúcido */
+    color: rgba(37, 99, 235, 0.8) !important;
+    /* Texto seleccionado visible */
+}
+
+/* Capa de resaltado (Highlights) */
+.highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.pdf-highlight {
+    position: absolute;
+    background-color: rgba(255, 255, 0, 0.4);
+    border-bottom: 2px solid rgba(255, 200, 0, 0.8);
+    border-radius: 2px;
+    mix-blend-mode: multiply;
+    animation: highlightPulse 2s infinite ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0% {
+        background-color: rgba(255, 255, 0, 0.3);
+    }
+
+    50% {
+        background-color: rgba(255, 255, 0, 0.5);
+    }
+
+    100% {
+        background-color: rgba(255, 255, 0, 0.3);
+    }
+}
+
+.ebook-highlight {
+    background-color: rgba(255, 255, 0, 0.4);
+    border-radius: 4px;
+    padding: 0 4px;
+    animation: highlightPulse 2s infinite ease-in-out;
+}
+
+/* Contenedor del visor PDF - necesario para posicionamiento absoluto del menú de selección */
+#pdfViewer {
+    position: relative;
+}
+
+/* Botón flotante de selección */
+.selection-menu {
+    position: absolute;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    background: #0f172a;
+    padding: 6px 12px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.2s ease-out;
+    pointer-events: auto;
+}
+
+.selection-menu button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.selection-menu button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.selection-menu::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #0f172a;
+}
+
+/* ============================================================================
+   PDF.js TextLayer - Selector de Texto Adaptable
+   ============================================================================ */
+
+/* Contenedor de página PDF */
+.pdf-page-container {
+    position: relative;
+    display: inline-block;
+    margin: 0 auto;
+}
+
+/* Canvas del PDF (fondo) */
+.pdf-page-container canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Capa de resaltado (para referencias) */
+.highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Resaltados individuales */
+.highlight-layer .highlight {
+    position: absolute;
+    background-color: rgba(255, 235, 59, 0.4);
+    /* Amarillo semitransparente */
+    border: 1px solid rgba(255, 193, 7, 0.6);
+    pointer-events: none;
+    transition: background-color 0.2s ease;
+}
+
+.highlight-layer .highlight.active {
+    background-color: rgba(255, 193, 7, 0.6);
+    border-color: rgba(255, 152, 0, 0.8);
+}
+
+/* Responsive: Ajustar en pantallas pequeñas */
+@media (max-width: 768px) {
+    .pdf-page-container {
+        max-width: 100%;
+    }
+
+    .textLayer span {
+        /* Asegurar que el texto sea seleccionable en móvil */
+        -webkit-user-select: text;
+        user-select: text;
+    }
+}

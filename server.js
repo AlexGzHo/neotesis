@@ -78,8 +78,8 @@ app.use(express.json({
   limit: SECURITY_CONFIG.PAYLOAD.MAX_SIZE
 }));
 
-// Servir archivos estáticos
-app.use(express.static(path.join(__dirname)));
+// Servir archivos estáticos (Production build)
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Middleware de blacklist (verificar IPs bloqueadas)
 app.use(blacklistMiddleware);
@@ -912,6 +912,12 @@ app.delete('/api/chats/:id', authMiddleware, async (req, res) => {
     });
     res.status(500).json({ error: 'Error al eliminar chat' });
   }
+});
+
+// SPA Fallback: redirigir todas las rutas al index.html del build
+// Esto permite que React Router maneje el ruteo del lado del cliente
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 /**

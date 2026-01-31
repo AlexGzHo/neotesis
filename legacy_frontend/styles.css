@@ -837,6 +837,7 @@ textarea::placeholder {
 }
 
 /* Capa de texto transparente pero seleccionable */
+/* Capa de texto transparente pero seleccionable */
 .textLayer {
   position: absolute;
   text-align: initial;
@@ -846,32 +847,33 @@ textarea::placeholder {
   bottom: 0;
   overflow: hidden;
   opacity: 1;
-  line-height: 1 !important;
-  /* Asegura que la caja de selección sea del tamaño del texto */
+  /* Standard styling */
+  line-height: 1.0;
   text-size-adjust: none;
   forced-color-adjust: none;
   transform-origin: 0 0;
-  z-index: 2;
-  pointer-events: none !important;
-  /* El contenedor no captura eventos para evitar puentes entre columnas */
+  z-index: 5;
+  /* Ensure it is above everything else */
+  pointer-events: auto !important;
+  /* CRITICAL: Capture mouse events for selection */
 }
 
-/* --- SELECCIÓN NATIVA POR LÍNEAS --- */
+/* --- SELECCIÓN NATIVA STANDARD --- */
 .textLayer span {
-  color: transparent !important;
+  color: transparent;
   position: absolute;
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
-  line-height: 1 !important;
-  pointer-events: auto !important;
-  box-sizing: content-box;
-  transition: background-color 0.15s ease;
-  z-index: 2;
-  width: auto !important;
-  overflow: hidden !important;
-  /* El secreto: evita que cajas vacías crucen columnas */
-  /* Asegura que no se estire entre columnas */
+  box-sizing: border-box;
+}
+
+/* Highlighting styles */
+.textLayer ::selection {
+  background: rgba(37, 99, 235, 0.3);
+  /* Blue selection */
+  color: transparent;
+  /* Keep text transparent */
 }
 
 .textLayer span.span-line-hover {
