@@ -1,5 +1,5 @@
-// Centralized API endpoints
-// Note: Vite proxy handles /api -> http://localhost:8080 during development
+// Trace: Bypass Proxy for debugging
+const BASE_URL = 'http://127.0.0.1:8080';
 
 export const API_ENDPOINTS = {
     CHAT: {
@@ -12,9 +12,9 @@ export const API_ENDPOINTS = {
         PROXY: '/api/proxy',
     },
     AUTH: {
-        LOGIN: '/api/auth/login',
-        REGISTER: '/api/auth/register',
-        ME: '/api/auth/me',
+        LOGIN: `${BASE_URL}/api/v2/auth/login`,
+        REGISTER: `${BASE_URL}/api/v2/auth/register`,
+        ME: `${BASE_URL}/api/v2/auth/me`,
     }
 };
 

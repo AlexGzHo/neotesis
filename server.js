@@ -49,27 +49,11 @@ app.use(additionalSecurityHeaders);
 
 // Configuración CORS segura
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Permitir requests sin origin (como mobile apps o curl)
-    if (!origin) return callback(null, true);
-
-    // Verificar dominio permitido
-    if (origin === SECURITY_CONFIG.ALLOWED_ORIGIN) {
-      return callback(null, true);
-    }
-
-    // Rechazar otros orígenes
-    securityLogger.unauthorizedAccess(
-      'unknown',
-      'CORS check',
-      { origin, reason: 'CORS violation' }
-    );
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: '*', // Permite cualquier origen por ahora
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 
@@ -199,6 +183,9 @@ function checkRateLimit(ip) {
 // ============================================================================
 // API ROUTES CON SEGURIDAD
 // ============================================================================
+
+// NEW V2 Auth Routes (Simplified)
+app.use('/api/v2/auth', require('./routes/auth_v2'));
 
 // Chat API route con validación, rate limiting estricto Y autenticación OPCIONAL
 app.post('/api/chat',

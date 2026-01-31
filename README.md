@@ -35,307 +35,104 @@ Plataforma académica integral con generador de citas APA, chat PDF con IA y cal
 ### 📊 Herramientas Estadísticas
 - **Calculadora de Muestra**: Determina el tamaño de muestra para investigaciones cuantitativas
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura Moderna (React + Vite + Docker)
 
 ```mermaid
 graph TB
-    A[Cliente - Navegador] -->|HTTPS| B[Railway App - Express.js]
-    B --> C[Frontend: HTML + CSS + JS]
-    B --> D[API Routes]
+    A[Cliente] -->|Browsing| B[Railway Container (Docker)]
+    style B fill:#e0f2fe
     
-    D -->|POST /api/auth/register| E1[Registro]
-    D -->|POST /api/auth/login| E2[Login]
-    D -->|GET /api/chats| E3[Lista de Chats]
-    D -->|POST /api/chat| E4[Chat con IA]
-    D -->|POST /api/proxy| E5[Proxy Académico]
-    
-    E1 --> F[PostgreSQL Database]
-    E2 --> F
-    E3 --> F
-    E4 --> F
-    
-    E4 -->|API Key segura| G[Groq API - Llama 3.3]
-    E5 -->|User-Agent académico| H[Repositorios/APIs]
-    
-    D -->|JWT Auth| I[Middleware de Autenticación]
-    D -->|Rate Limiting| J[Control de Cuotas]
+    subgraph "Docker Container (Port 8080)"
+        C[Express Backend] -->|Serves| D[React Frontend (dist/)]
+        C -->|API Routes| D
+        D -->|Fetch API| C
+    end
 
-    style E4 fill:#10b981
-    style E5 fill:#3b82f6
-    style G fill:#f59e0b
-    style F fill:#8b5cf6
-    style I fill:#ef4444
+    C -->|PostgreSQL Protocol| E[Railway Database]
+    F[Groq API] -->|Llama 3| C
+    
+    style E fill:#dbeafe
+    style F fill:#fef3c7
 ```
+
+El proyecto ha sido migrado a una arquitectura **Fullstack con Docker**:
+
+1.  **Frontend**: React 18 + Vite (SPA). Se compila a archivos estáticos (`dist/`) durante el build.
+2.  **Backend**: Node.js + Express. Sirve tanto la API REST como los archivos estáticos del frontend.
+3.  **Deployment**: Un único contenedor Docker que contiene todo.
 
 ### Seguridad
-
 ✅ **Autenticación JWT**: Tokens seguros con expiración de 7 días  
-✅ **Encriptación de Contraseñas**: Bcrypt con salt rounds para hash seguro  
-✅ **API Keys Protegidas**: Nunca expuestas en el cliente, solo en variables de entorno del servidor  
-✅ **Rate Limiting Robusto**: Implementado por IP y usuario en el servidor  
-✅ **Whitelist de Dominios**: Solo se permite scraping de sitios académicos autorizados  
-✅ **Validación de Inputs**: Todas las entradas son validadas y sanitizadas (XSS, SQL Injection)  
-✅ **Headers de Seguridad**: CSP, X-Frame-Options, CORS configurado  
-✅ **Protección CSRF**: Tokens CSRF en formularios críticos  
-✅ **Session Management**: Timeout automático por inactividad
-
-## 🚀 Deployment en Railway
-
-### Paso 1: Obtener una Groq API Key
-
-1. Ve a [console.groq.com](https://console.groq.com/)
-2. Crea una cuenta o inicia sesión
-3. Ve a **API Keys** en el menú lateral
-4. Haz clic en **Create API Key**
-5. Copia la key (formato: `gsk_...`)
-
-> [!IMPORTANT]
-> Guarda tu API key en un lugar seguro. No la compartas ni la subas a GitHub.
-
-### Paso 2: Preparar el Repositorio
-
-```bash
-# Clonar el repositorio (si aún no lo has hecho)
-git clone https://github.com/TU_USUARIO/neotesis.git
-cd neotesis
-
-# Instalar dependencias
-npm install
-```
-
-### Paso 3: Deploy en Railway
-
-1. **Sube tu código a GitHub**:
-   ```bash
-   git add .
-   git commit -m "Migración a Railway con Express"
-   git push origin main
-   ```
-
-2. **Conecta con Railway**:
-   - Ve a [railway.app](https://railway.app/)
-   - Crea una cuenta o inicia sesión
-   - Haz clic en **New Project** → **Deploy from GitHub repo**
-   - Autoriza Railway para acceder a GitHub
-   - Selecciona tu repositorio `neotesis`
-
-3. **Railway detectará automáticamente**:
-   - El proyecto Node.js
-   - El comando `npm start`
-   - Puerto automático (process.env.PORT)
-
-4. **Agregar variable de entorno**:
-   - En el dashboard de Railway, ve a tu proyecto
-   - Ve a **Variables** en el menú lateral
-   - Haz clic en **Add Variable**
-   - **Key**: `GROQ_API_KEY`
-   - **Value**: Tu API key de Groq (ej: `gsk_...`)
-   - Haz clic en **Add**
-
-5. **Deploy automático**:
-   - Railway comenzará el build automáticamente
-   - Espera a que complete (~2-3 minutos)
-   - ¡Tu sitio estará live en la URL generada por Railway!
-
-### Paso 4: Verificar el Deployment
-
-1. **Verificar que la app está corriendo**:
-   - En Railway Dashboard → **Deployments**
-   - Deberías ver el deployment exitoso
-
-2. **Probar el sitio**:
-   - Abre la URL de Railway en el navegador
-   - Ve a **Chat con PDF**
-   - Sube un PDF de prueba
-   - Haz una pregunta
-   - Verifica que la IA responde correctamente
-
-3. **Verificar rate limiting**:
-   - Haz 3 consultas seguidas
-   - En la 4ta consulta, deberías ver el mensaje de límite alcanzado
-   - Verifica que aparece el countdown timer
-
-## 💻 Desarrollo Local
-
-### Requisitos
-
-- Node.js 18 o superior
-- npm o yarn
-
-### Setup
-
-```bash
-# Instalar dependencias
-npm install
-
-# Crear archivo .env en la raíz del proyecto
-echo "GROQ_API_KEY=tu_key_aqui" > .env
-
-# Iniciar servidor de desarrollo
-npm start
-```
-
-El sitio estará disponible en `http://localhost:3000`
-
-### Estructura del Proyecto
-
-```
-neotesis/
-├── server.js                # Servidor Express con rutas API
-├── index.html               # Página principal
-├── styles.css               # Estilos globales y componentes
-├── scripts.js               # Lógica del cliente
-├── package.json             # Dependencias
-├── .env                     # Variables de entorno (no en Git)
-├── .gitignore               # Archivos ignorados
-│
-├── models/                  # Modelos de base de datos (Sequelize)
-│   ├── index.js            # Configuración de Sequelize
-│   ├── User.js             # Modelo de usuarios
-│   ├── Chat.js             # Modelo de chats
-│   └── Message.js          # Modelo de mensajes
-│
-├── middleware/              # Middleware de Express
-│   ├── auth.js             # Autenticación JWT
-│   ├── rateLimit.js        # Rate limiting
-│   └── validation.js       # Validación de inputs
-│
-├── routes/                  # Rutas de la API
-│   └── api.js              # Endpoints de la API
-│
-├── config/                  # Configuración
-│   ├── database.js         # Configuración de PostgreSQL
-│   └── cloudflare.md       # Documentación de Cloudflare
-│
-├── migrations/              # Migraciones de base de datos
-│   └── add_pdf_content_to_chats.js
-│
-├── docs/                    # Documentación
-│   └── AUTH_API.md         # Documentación de API de autenticación
-│
-└── README.md               # Este archivo
-```
-
-## 🔧 Troubleshooting
-
-### Error: "GROQ_API_KEY no está configurada"
-
-**Causa**: La variable de entorno no está configurada en Railway.
-
-**Solución**:
-1. Ve a Railway Dashboard → Tu proyecto → Variables
-2. Agrega `GROQ_API_KEY` con tu key de Groq
-3. Railway redeployará automáticamente
-
-### Error: "Dominio no permitido"
-
-**Causa**: Intentaste hacer scraping de un sitio que no está en la whitelist.
-
-**Solución**: Solo se permiten repositorios académicos y bases de datos científicas. Verifica que la URL sea de un sitio permitido:
-- Repositorios peruanos: UCV, UPAO, UTP, USIL, UPC, UNMSM
-- APIs públicas: CrossRef, DOI.org
-- Bases de datos: ScienceDirect, PubMed, arXiv, etc.
-
-Para agregar un dominio a la whitelist, edita `netlify/functions/proxy.js` y agrega el dominio al array `ALLOWED_DOMAINS`.
-
-### Error: "Has excedido el límite de consultas"
-
-**Causa**: Has usado tus 3 consultas diarias del chat PDF.
-
-**Solución**: El límite se resetea automáticamente después de 24 horas desde tu primera consulta. El countdown timer te muestra cuánto tiempo falta.
-
-> [!NOTE]
-> El rate limiting es por IP, no por navegador. Limpiar cookies o localStorage no te dará consultas adicionales.
-
-### Las funciones no se despliegan
-
-**Causa**: Netlify no detectó la carpeta `netlify/functions`.
-
-**Solución**:
-1. Verifica que `netlify.toml` tenga `functions = "netlify/functions"`
-2. Verifica que los archivos `chat.js` y `proxy.js` existan en esa carpeta
-3. Redeploy el sitio
-
-### Error 500 en las funciones
-
-**Causa**: Error interno en la función serverless.
-
-**Solución**:
-1. Ve a Netlify Dashboard → Functions → Selecciona la función → Logs
-2. Revisa los logs para ver el error específico
-3. Verifica que `GROQ_API_KEY` esté configurada correctamente
-4. Verifica que `node-fetch` esté en `package.json`
-
-## 📊 Rate Limiting
-
-El sistema implementa rate limiting en dos capas:
-
-### Capa 1: Cliente (localStorage)
-- **Propósito**: Mejorar UX mostrando contador al usuario
-- **Límite**: 3 consultas / 24 horas
-- **Almacenamiento**: localStorage del navegador
-- **Nota**: Fácilmente manipulable, solo para UX
-
-### Capa 2: Servidor (IP-based)
-- **Propósito**: Seguridad real
-- **Límite**: 3 consultas / 24 horas por IP
-- **Almacenamiento**: Memoria de la función serverless
-- **Nota**: No manipulable desde el cliente
-
-> [!WARNING]
-> **Limitación conocida**: El rate limiting del servidor usa memoria de la función, que se resetea cuando la función se "enfría" (~15 minutos de inactividad).
-> 
-> Para un rate limiting más robusto en producción, considera usar:
-> - Netlify Blobs (KV store)
-> - Upstash Redis
-> - Netlify Edge Functions con Deno KV
-
-## 🔐 Seguridad
-
-### Buenas Prácticas Implementadas
-
-✅ **Nunca expongas API keys en el cliente**
-- Las keys solo existen en variables de entorno del servidor
-- El código del cliente nunca ve las keys
-
-✅ **Valida todas las entradas**
-- Todas las funciones serverless validan inputs
-- Se sanitizan URLs para prevenir ataques
-
-✅ **Usa whitelist de dominios**
-- Solo se permite scraping de sitios académicos autorizados
-- Previene uso malicioso del proxy
-
-✅ **Implementa rate limiting**
-- Previene abuso del servicio
-- Protege tu cuota de Groq API
-
-✅ **Maneja errores gracefully**
-- No expongas detalles internos en mensajes de error
-- Logs detallados solo en el servidor
-
-## 📝 Licencia
-
-MIT License - Neotesis Perú © 2025
-
-## 🤝 Contribuciones
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📧 Soporte
-
-¿Necesitas ayuda? Contáctanos:
-
-- WhatsApp: +51 900 000 000
-- Email: soporte@neotesis.pe
-- Web: https://neotesis.netlify.app
+✅ **Protección CSRF & Headers**: Helmet config, rate limiting por IP  
+✅ **Sanitización Nativa**: React protege contra XSS, DOMPurify sanitiza HTML  
+✅ **Proxy Seguro**: El backend maneja todas las peticiones externas (Groq, Repositorios) para ocultar las API Keys
+
+## 🚀 Deployment en Railway (Método Recomendado)
+
+Gracias al nuevo `Dockerfile`, el despliegue es automático y robusto.
+
+### Paso 1: Variables de Entorno
+En tu proyecto de Railway, configura estas variables:
+- `GROQ_API_KEY`: Tu API key de Groq AI
+- `NODE_ENV`: `production`
+
+### Paso 2: Conectar el Repositorio
+1.  En Railway, selecciona "Deploy from GitHub".
+2.  Elige este repositorio.
+3.  Railway detectará automáticamente el `Dockerfile`.
+4.  ¡Listo! El build tomará unos minutos porque Railway construirá primero el frontend y luego el backend.
 
 ---
 
-**Hecho con ❤️ para estudiantes universitarios peruanos**
+## 💻 Desarrollo Local con Docker (Opción Fácil)
+
+Si tienes Docker instalado, puedes levantar todo el entorno con un solo comando, sin instalar Node.js ni configurar bases de datos manualmente.
+
+```bash
+# 1. Crear archivo .env
+echo "GROQ_API_KEY=tu_key_aqui" > .env
+
+# 2. Levantar todo (App + Base de Datos)
+docker-compose up --build
+```
+La app estará disponible en `http://localhost:8080`.
+
+---
+
+## 💻 Desarrollo Local Manual (Para editar código)
+
+Si quieres modificar el código, corre el frontend y backend por separado para tener Hot Reload (HMR).
+
+### 1. Instalar dependencias
+```bash
+npm install
+```
+
+### 2. Iniciar Modo Desarrollo (Terminal 1)
+Inicia el backend (Express) y el frontend (Vite) simultáneamente:
+```bash
+npm run dev:all
+# O manualmente en dos terminales:
+# Terminal A: npm run dev:backend
+# Terminal B: npm run dev:frontend
+```
+
+- **Frontend (UI)**: `http://localhost:5173` (Usar este para desarrollar)
+- **Backend (API)**: `http://localhost:8080`
+
+### Comandos Disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Inicia solo el Frontend (Vite) |
+| `npm start` | Inicia el Backend en producción (sirve `dist/`) |
+| `npm run build` | Compila el Frontend a la carpeta `dist/` |
+| `npm run dev:backend` | Inicia el Backend en modo watch |
+
+## 🔧 Troubleshooting
+
+### "Error: ECONNREFUSED" en el Login
+Asegúrate de que el backend esté corriendo (`npm run dev:backend` o `node server.js`). El frontend necesita que el backend esté activo en el puerto 8080.
+
+### Cambios en React no se ven en el puerto 8080
+El puerto 8080 sirve la versión *compilada* (`dist`). Si haces cambios en React, debes correr `npm run build` para actualizarlos allí, o simplemente usar el puerto 5173 para el desarrollo diario.

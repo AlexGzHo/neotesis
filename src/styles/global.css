@@ -1,19 +1,10 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import './variables.css';
 
-@theme {
-    --color-primary: var(--primary);
-    --color-primary-light: #1e293b;
-    --color-accent: #2563eb;
-    --color-accent-hover: #1d4ed8;
-    --color-bg-light: #f8fafc;
-    --color-border: #e2e8f0;
-    --color-gray: #64748b;
-
-    --shadow-glow: 0 10px 15px -3px rgba(37, 99, 235, 0.15);
-    --shadow-modal: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
-    --shadow-premium: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-}
+/* Tailwind v3 Theme variables are defined in tailwind.config.js */
 
 @keyframes slideUp {
     from {
@@ -1044,9 +1035,245 @@ textarea::placeholder {
         max-width: 100%;
     }
 
+    background: white;
+}
+
+/* Capa de texto transparente pero seleccionable */
+.textLayer {
+    position: absolute;
+    text-align: initial;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 1;
+    /* Standard styling */
+    line-height: 1.0;
+    text-size-adjust: none;
+    forced-color-adjust: none;
+    transform-origin: 0 0;
+    z-index: 5;
+    /* Ensure it is above everything else */
+    pointer-events: auto !important;
+    /* CRITICAL: Capture mouse events for selection */
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* --- SELECCIÓN NATIVA STANDARD --- */
+.textLayer span {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+    box-sizing: border-box;
+}
+
+/* Highlighting styles */
+.textLayer ::selection {
+    background: rgba(37, 99, 235, 0.3);
+    /* Blue selection */
+    color: transparent;
+    /* Keep text transparent */
+}
+
+.textLayer span.span-line-hover {
+    background: rgba(37, 99, 235, 0.08) !important;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.textLayer ::selection {
+    background: rgba(37, 99, 235, 0.35) !important;
+    /* Azul profesional translúcido */
+    color: rgba(37, 99, 235, 0.8) !important;
+    /* Texto seleccionado visible */
+}
+
+/* Capa de resaltado (Highlights) */
+.highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.pdf-highlight {
+    position: absolute;
+    background-color: rgba(255, 255, 0, 0.4);
+    border-bottom: 2px solid rgba(255, 200, 0, 0.8);
+    border-radius: 2px;
+    mix-blend-mode: multiply;
+    animation: highlightPulse 2s infinite ease-in-out;
+}
+
+@keyframes highlightPulse {
+    0% {
+        background-color: rgba(255, 255, 0, 0.3);
+    }
+
+    50% {
+        background-color: rgba(255, 255, 0, 0.5);
+    }
+
+    100% {
+        background-color: rgba(255, 255, 0, 0.3);
+    }
+}
+
+.ebook-highlight {
+    background-color: rgba(255, 255, 0, 0.4);
+    border-radius: 4px;
+    padding: 0 4px;
+    animation: highlightPulse 2s infinite ease-in-out;
+}
+
+/* Contenedor del visor PDF - necesario para posicionamiento absoluto del menú de selección */
+#pdfViewer {
+    position: relative;
+}
+
+/* Botón flotante de selección */
+.selection-menu {
+    position: absolute;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    background: #0f172a;
+    padding: 6px 12px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.2s ease-out;
+    pointer-events: auto;
+}
+
+.selection-menu button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.selection-menu button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.selection-menu::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #0f172a;
+}
+
+/* ============================================================================
+   PDF.js TextLayer - Selector de Texto Adaptable
+   ============================================================================ */
+
+/* Contenedor de página PDF */
+.pdf-page-container {
+    position: relative;
+    display: inline-block;
+    margin: 0 auto;
+}
+
+/* Canvas del PDF (fondo) */
+.pdf-page-container canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Capa de resaltado (para referencias) */
+.highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Resaltados individuales */
+.highlight-layer .highlight {
+    position: absolute;
+    background-color: rgba(255, 235, 59, 0.4);
+    /* Amarillo semitransparente */
+    border: 1px solid rgba(255, 193, 7, 0.6);
+    pointer-events: none;
+    transition: background-color 0.2s ease;
+}
+
+.highlight-layer .highlight.active {
+    background-color: rgba(255, 193, 7, 0.6);
+    border-color: rgba(255, 152, 0, 0.8);
+}
+
+/* Responsive: Ajustar en pantallas pequeñas */
+@media (max-width: 768px) {
+    .pdf-page-container {
+        max-width: 100%;
+    }
+
     .textLayer span {
         /* Asegurar que el texto sea seleccionable en móvil */
         -webkit-user-select: text;
         user-select: text;
     }
+}
+
+/* ============================================================================
+   PDF.js Text Layer - FORCED IMPLEMENTATION
+   ============================================================================ */
+.textLayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 1;
+    line-height: 1.0;
+    transform-origin: 0 0;
+    z-index: 50;
+    /* Ensure it is ABOVE canvas */
+    background: transparent;
+    /* Ensure it catches events */
+    pointer-events: auto;
+    /* CRITICAL: Allows selecting text */
+}
+
+/* Make spans visible to selection but invisible to eye */
+.textLayer span,
+.textLayer br {
+    color: transparent;
+    position: absolute;
+    white-space: pre;
+    cursor: text;
+    transform-origin: 0% 0%;
+}
+
+/* Native-like selection highlight */
+.textLayer ::selection {
+    background: rgba(37, 99, 235, 0.3);
+    /* Blue selection */
+    color: transparent;
 }

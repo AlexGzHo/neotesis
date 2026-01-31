@@ -19,7 +19,7 @@ const SECURITY_CONFIG = {
   PORT: process.env.PORT || 8080,
 
   // Dominio permitido para CORS
-  ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || 'https://neotesisperu.online',
+  ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || ['http://localhost:8080', 'http://localhost:5173'],
 
   // API Key de Groq (con validación)
   GROQ_API_KEY: process.env.GROQ_API_KEY,

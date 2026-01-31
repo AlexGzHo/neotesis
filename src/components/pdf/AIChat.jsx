@@ -54,7 +54,7 @@ export const AIChat = () => {
             {/* Main Area */}
             <div className="flex-1 flex overflow-hidden relative">
                 <div className="flex-1 relative min-w-0">
-                    <PDFViewer pdfData={pdfData} onTextExtracted={setPdfText} />
+                    <PDFViewer pdfData={pdfData} onTextExtracted={setPdfText} onUpload={handleFileUpload} />
                 </div>
 
                 {/* Chat Panel */}

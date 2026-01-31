@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { usePDFViewer } from '../../hooks/usePDFViewer';
 
-export const PDFViewer = ({ pdfData, onTextExtracted }) => {
+export const PDFViewer = ({ pdfData, onTextExtracted, onUpload }) => {
     const {
         canvasRef,
+        textLayerRef,
         loadPDF,
         currentPage,
         totalPages,
@@ -72,13 +73,29 @@ export const PDFViewer = ({ pdfData, onTextExtracted }) => {
                 )}
 
                 {!pdfData && !isLoading && (
-                    <div className="flex flex-col items-center justify-center opacity-40 mt-20">
-                        <span className="material-icons-round text-6xl mb-4 text-slate-300">description</span>
-                        <p className="text-sm font-bold text-slate-500">Sin Documento</p>
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center max-w-sm text-center">
+                            <div className="w-16 h-16 bg-blue-50 text-accent rounded-2xl flex items-center justify-center mb-4">
+                                <span className="material-icons-round text-3xl">upload_file</span>
+                            </div>
+                            <h3 className="text-slate-800 font-bold text-lg mb-2">Sube tu documento</h3>
+                            <p className="text-slate-500 text-sm mb-6">Analiza tesis, libros o artículos con IA avanzada.</p>
+
+                            <label className="bg-primary hover:bg-primary-light text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 cursor-pointer flex items-center gap-2">
+                                <span className="material-icons-round text-sm">add</span>
+                                Seleccionar PDF
+                                <input type="file" className="hidden" accept=".pdf" onChange={onUpload} />
+                            </label>
+                        </div>
                     </div>
                 )}
 
-                <canvas ref={canvasRef} className="shadow-lg mb-4 bg-white" />
+                {pdfData && (
+                    <div className="relative">
+                        <canvas ref={canvasRef} className="shadow-lg mb-4 bg-white block" />
+                        <div ref={textLayerRef} className="textLayer" />
+                    </div>
+                )}
             </div>
         </div>
     );

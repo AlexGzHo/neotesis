@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // Helper to set worker. Note: vite configuration manualChunks handles the split
 // But we need to point to the worker file.
-// In development/production with vite, we usually serve it from public/
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export const usePDFViewer = () => {
   const [pdfDocument, setPdfDocument] = useState(null);
@@ -16,6 +16,7 @@ export const usePDFViewer = () => {
   const [pdfTextContent, setPdfTextContent] = useState([]); // Cache text per page
 
   const canvasRef = useRef(null);
+  const textLayerRef = useRef(null);
   const renderTaskRef = useRef(null);
 
   // Load PDF
@@ -24,22 +25,22 @@ export const usePDFViewer = () => {
       setIsLoading(true);
       setError(null);
       setPdfTextContent([]);
-      
+
       // Cleanup previous doc if any
       if (pdfDocument) {
-         // handle cleanup if needed
+        // handle cleanup if needed
       }
 
       const loadingTask = pdfjsLib.getDocument(pdfData);
       const doc = await loadingTask.promise;
-      
+
       setPdfDocument(doc);
       setTotalPages(doc.numPages);
       setCurrentPage(1);
-      
+
       // Extract text from all pages for AI context (optional, can be lazy)
       extractAllText(doc);
-      
+
     } catch (err) {
       console.error("Error loading PDF:", err);
       setError("Error al cargar el archivo PDF.");
@@ -52,14 +53,14 @@ export const usePDFViewer = () => {
   const extractAllText = async (doc) => {
     let texts = [];
     for (let i = 1; i <= doc.numPages; i++) {
-        try {
-            const page = await doc.getPage(i);
-            const content = await page.getTextContent();
-            const strings = content.items.map(item => item.str).join(' ');
-            texts.push({ page: i, text: strings });
-        } catch (e) {
-            console.error(`Error extracting text from page ${i}`, e);
-        }
+      try {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str).join(' ');
+        texts.push({ page: i, text: strings });
+      } catch (e) {
+        console.error(`Error extracting text from page ${i}`, e);
+      }
     }
     setPdfTextContent(texts);
   };
@@ -78,9 +79,11 @@ export const usePDFViewer = () => {
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
 
+      // Sync Canvas Dimensions
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
+      // Render Canvas
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
@@ -90,6 +93,30 @@ export const usePDFViewer = () => {
       renderTaskRef.current = renderTask;
 
       await renderTask.promise;
+
+      // --- Text Layer Logic ---
+      if (textLayerRef.current) {
+        // Clear previous text layer content
+        textLayerRef.current.innerHTML = '';
+
+        // Explicitly set dimensions to match viewport (CRITICAL for v4 selection)
+        textLayerRef.current.style.height = `${viewport.height}px`;
+        textLayerRef.current.style.width = `${viewport.width}px`;
+        textLayerRef.current.style.setProperty('--scale-factor', scale);
+
+        // Get text content
+        const textContent = await page.getTextContent();
+
+        // Render Text Layer
+        const textLayerRenderTask = pdfjsLib.renderTextLayer({
+          textContentSource: textContent,
+          container: textLayerRef.current,
+          viewport: viewport,
+        });
+
+        await textLayerRenderTask.promise;
+      }
+
     } catch (err) {
       if (err.name !== 'RenderingCancelledException') {
         console.error("Render error:", err);
@@ -99,8 +126,8 @@ export const usePDFViewer = () => {
 
   // Effect to render when page/scale changes
   useEffect(() => {
-    if(pdfDocument) {
-        renderPage(currentPage);
+    if (pdfDocument) {
+      renderPage(currentPage);
     }
   }, [pdfDocument, currentPage, scale, renderPage]);
 
@@ -120,6 +147,7 @@ export const usePDFViewer = () => {
     error,
     pdfTextContent,
     canvasRef,
+    textLayerRef,
     loadPDF,
     nextPage,
     prevPage,

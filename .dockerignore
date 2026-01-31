@@ -1,0 +1,37 @@
+# Dependencias
+node_modules
+.npm
+npm-debug.log
+
+# Git
+.git
+.gitignore
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+logs
+*.log
+
+# Build output (we build inside docker)
+dist
+coverage
+
+# IDEs
+.vscode
+.idea
+*.swp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+railway.json
+
+# Documentation
+docs
+plans
+migracion_requerida.md
+README*.md
