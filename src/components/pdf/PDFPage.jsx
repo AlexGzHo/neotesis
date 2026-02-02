@@ -1,101 +1,95 @@
-import React, { useEffect, useRef } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import './TextLayer.css'; // Import isolated styles
+import React, { useState } from 'react';
+import { Page } from 'react-pdf';
 
-export const PDFPage = ({ pdfDocument, pageNumber, scale }) => {
-    const canvasRef = useRef(null);
-    const textLayerRef = useRef(null);
-    const renderTaskRef = useRef(null);
-    const pageRenderRef = useRef(null);
+const RENDER_SCALE = 2.0; // Calidad de renderizado fija (Alta) - coincide con usePDFViewer
 
-    useEffect(() => {
-        const renderPage = async () => {
-            if (!pdfDocument || !canvasRef.current || !textLayerRef.current) return;
+export const PDFPage = ({ index, containerWidth, scale, onRestoreSelection, ocrData }) => {
+    const [pageDims, setPageDims] = useState(null);
 
-            try {
-                // Cancel previous render if any
-                if (renderTaskRef.current) {
-                    renderTaskRef.current.cancel();
-                }
+    const onPageLoadSuccess = ({ width, height }) => {
+        setPageDims({ width, height });
+    };
 
-                const page = await pdfDocument.getPage(pageNumber);
-                const viewport = page.getViewport({ scale });
-                const canvas = canvasRef.current;
-                const context = canvas.getContext('2d');
+    // Factor de escala visual: (Escala deseada) / (Escala de renderizado)
+    const visualScale = scale / RENDER_SCALE;
 
-                // Sync Canvas Dimensions (Physically matches the viewport) - Critical for clarity
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                canvas.style.width = `${viewport.width}px`;
-                canvas.style.height = `${viewport.height}px`;
+    // Render OCR Text Layer
+    const renderOCRLayer = () => {
+        if (!ocrData || !Array.isArray(ocrData) || ocrData.length === 0 || !pageDims) return null;
 
-                // --- Canvas Render ---
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport,
-                };
+        return (
+            <div className="ocr-layer" style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 51, // Above standard text layer
+                pointerEvents: 'none' // Let clicks pass initially, but spans have auto
+            }}>
+                {ocrData.map((word, i) => {
+                    const { bbox, text } = word;
+                    if (!bbox) return null;
 
-                const renderTask = page.render(renderContext);
-                renderTaskRef.current = renderTask;
-                await renderTask.promise;
-
-                // --- Text Layer Render ---
-                const textLayerDiv = textLayerRef.current;
-
-                // Clear previous content
-                textLayerDiv.innerHTML = '';
-
-                // Set dimensions to match viewport exactly so selection aligns
-                textLayerDiv.style.setProperty('--scale-factor', scale);
-                textLayerDiv.style.width = `${viewport.width}px`;
-                textLayerDiv.style.height = `${viewport.height}px`;
-
-                const textContentSource = page.streamTextContent({ includeMarkedContent: true });
-
-                const textLayer = new pdfjsLib.TextLayer({
-                    textContentSource: textContentSource,
-                    container: textLayerDiv,
-                    viewport: viewport,
-                });
-
-                await textLayer.render();
-
-                // Add end of content marker for better selection handling (from reference)
-                const end = document.createElement('div');
-                end.className = 'endOfContent';
-                textLayerDiv.append(end);
-
-            } catch (error) {
-                if (error.name !== 'RenderingCancelledException') {
-                    console.error(`Error rendering page ${pageNumber}:`, error);
-                }
-            }
-        };
-
-        renderPage();
-
-        return () => {
-            if (renderTaskRef.current) {
-                renderTaskRef.current.cancel();
-            }
-        };
-    }, [pdfDocument, pageNumber, scale]);
+                    return (
+                        <span key={i} style={{
+                            position: 'absolute',
+                            left: `${bbox.x0}px`,
+                            top: `${bbox.y0}px`,
+                            width: `${bbox.x1 - bbox.x0}px`,
+                            height: `${bbox.y1 - bbox.y0}px`,
+                            color: 'transparent',
+                            cursor: 'text',
+                            pointerEvents: 'auto',
+                            userSelect: 'text',
+                            fontSize: `${bbox.y1 - bbox.y0}px`, // Approx font size
+                            lineHeight: 1,
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {text}
+                        </span>
+                    );
+                })}
+            </div>
+        );
+    };
 
     return (
         <div
-            className="pdf-page-container relative mb-6 shadow-md bg-white select-none" // select-none on container, textLayer handles selection
+            className="shadow-md bg-white transition-all duration-75 ease-linear relative"
             style={{
-                width: 'fit-content',
-                height: 'fit-content'
+                width: pageDims ? pageDims.width * visualScale : 'auto',
+                height: pageDims ? pageDims.height * visualScale : 'auto',
+                overflow: 'hidden'
             }}
         >
-            <canvas ref={canvasRef} className="block" />
             <div
-                ref={textLayerRef}
-                className="textLayer"
-                onMouseDown={(e) => e.currentTarget.classList.add('selecting')}
-                onMouseUp={(e) => e.currentTarget.classList.remove('selecting')}
-            />
+                style={{
+                    transform: `scale(${visualScale})`,
+                    transformOrigin: 'top left',
+                    width: pageDims ? pageDims.width : undefined,
+                    height: pageDims ? pageDims.height : undefined,
+                    position: 'relative' // Needed for OCR layer absolute positioning context
+                }}
+            >
+                <Page
+                    pageNumber={index + 1}
+                    width={containerWidth ? containerWidth - 48 : 600}
+                    scale={RENDER_SCALE}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    onLoadSuccess={onPageLoadSuccess}
+                    className="border-b border-gray-200"
+                    loading={
+                        <div className="h-[800px] w-full bg-white animate-pulse flex items-center justify-center text-slate-300">
+                            <span className="material-icons-round text-4xl opacity-50">description</span>
+                        </div>
+                    }
+                />
+
+                {/* OCR Layer Overlay */}
+                {renderOCRLayer()}
+            </div>
         </div>
     );
 };

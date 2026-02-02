@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { pdfjs } from 'react-pdf';
+import Tesseract from 'tesseract.js';
 
-// Helper to set worker.
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Helper to set worker (CDN to match PDFViewer and ensure version compatibility)
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export const usePDFViewer = () => {
   const [pdfDocument, setPdfDocument] = useState(null);
@@ -25,7 +25,7 @@ export const usePDFViewer = () => {
         // pdfDocument.destroy(); // Optional: destroy if supported/needed
       }
 
-      const loadingTask = pdfjsLib.getDocument(pdfData);
+      const loadingTask = pdfjs.getDocument(pdfData);
       const doc = await loadingTask.promise;
 
       setPdfDocument(doc);
@@ -42,24 +42,79 @@ export const usePDFViewer = () => {
     }
   }, []);
 
+  // Helper for OCR
+  const performOCR = async (page) => {
+    try {
+      const viewport = page.getViewport({ scale: 2.0 }); // High quality for OCR
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+      const { data } = await Tesseract.recognize(
+        canvas.toDataURL('image/png'),
+        'eng+spa', // English and Spanish support
+        { logger: m => console.log(m) }
+      );
+
+      return { text: data.text, words: data.words };
+    } catch (error) {
+      console.error("Error OCR:", error);
+      return { text: "", words: [] };
+    }
+  };
+
   // Extract text helper
   const extractAllText = async (doc) => {
-    let texts = [];
+    let isMounted = true;
+
+    // Initialize array with empty placeholders to maintain order
+    setPdfTextContent(new Array(doc.numPages).fill(null));
+
     for (let i = 1; i <= doc.numPages; i++) {
+      if (!isMounted) break; // Stop if unmounted
+
+      // Process sequentially or in parallel chunks could be better, but sequential is safer for memory with OCR
       try {
         const page = await doc.getPage(i);
         const content = await page.getTextContent();
-        const strings = content.items.map(item => item.str).join(' ');
-        texts.push({ page: i, text: strings });
+        let pageData = { page: i, text: '', words: [], isOCR: false };
+
+        const hasNativeText = content.items.length > 0;
+
+        if (hasNativeText) {
+          // Use native text
+          const strings = content.items.map(item => item.str).join(' ');
+          pageData.text = strings;
+        } else {
+          // Fallback to OCR
+          console.log(`Page ${i} requires OCR...`);
+          const ocrResult = await performOCR(page);
+          pageData.text = ocrResult.text;
+          pageData.words = ocrResult.words;
+          pageData.isOCR = true;
+        }
+
+        if (!isMounted) break; // Check again before update
+
+        // Update state safely function
+        setPdfTextContent(prev => {
+          const newContent = [...prev];
+          newContent[i - 1] = pageData;
+          return newContent;
+        });
+
       } catch (e) {
         console.error(`Error extracting text from page ${i}`, e);
       }
     }
-    setPdfTextContent(texts);
+
+    return () => { isMounted = false; };
   };
 
   // Controls
-  // Rounding helps avoid floating point precision issues (0.1 + 0.2 = 0.30000000000000004)
   const zoomIn = () => setScale(s => {
     const newScale = Math.min(s + 0.1, 3.0);
     return Math.round(newScale * 10) / 10;
@@ -76,7 +131,7 @@ export const usePDFViewer = () => {
     setScale, // Expose setScale for external control
     isLoading,
     error,
-    pdfTextContent,
+    pdfTextContent, // Now contains { page, text, words, isOCR }
     loadPDF,
     zoomIn,
     zoomOut
