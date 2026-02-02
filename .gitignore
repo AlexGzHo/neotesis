@@ -41,3 +41,7 @@ desktop.ini
 dist/
 build/
 out/
+
+# External/Temp folders
+react-pdf-main/
+coverage/

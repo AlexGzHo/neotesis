@@ -59,13 +59,21 @@ export const usePDFViewer = () => {
   };
 
   // Controls
-  const zoomIn = () => setScale(s => Math.min(s + 0.2, 3.0));
-  const zoomOut = () => setScale(s => Math.max(s - 0.2, 0.5));
+  // Rounding helps avoid floating point precision issues (0.1 + 0.2 = 0.30000000000000004)
+  const zoomIn = () => setScale(s => {
+    const newScale = Math.min(s + 0.1, 3.0);
+    return Math.round(newScale * 10) / 10;
+  });
+  const zoomOut = () => setScale(s => {
+    const newScale = Math.max(s - 0.1, 0.5);
+    return Math.round(newScale * 10) / 10;
+  });
 
   return {
     pdfDocument,
     totalPages,
     scale,
+    setScale, // Expose setScale for external control
     isLoading,
     error,
     pdfTextContent,
