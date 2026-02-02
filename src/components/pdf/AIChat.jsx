@@ -39,14 +39,20 @@ export const AIChat = () => {
         };
     }, [resize, stopResizing]);
 
+    // Memory Leak Cleanup
+    React.useEffect(() => {
+        return () => {
+            if (pdfData && typeof pdfData === 'string' && pdfData.startsWith('blob:')) {
+                URL.revokeObjectURL(pdfData);
+            }
+        };
+    }, [pdfData]);
+
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (file && file.type === 'application/pdf') {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                setPdfData(ev.target.result);
-            };
-            reader.readAsArrayBuffer(file);
+            const fileUrl = URL.createObjectURL(file);
+            setPdfData(fileUrl);
         }
     };
 

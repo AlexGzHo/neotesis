@@ -14,5 +14,24 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
+  app:
+    build: .
+    container_name: neotesis-app
+    ports:
+      - "8081:8080"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_USER=neotesis
+      - DB_PASSWORD=local_password
+      - DB_NAME=neotesis_db
+      - PORT=8080
+      # Pass secrets from .env file
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - db
+    restart: always
+
 volumes:
   postgres_data:

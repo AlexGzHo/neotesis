@@ -53,8 +53,11 @@ export const usePDFViewer = () => {
 
       await page.render({ canvasContext: context, viewport: viewport }).promise;
 
+      // Extract raw image data (faster/sharper for Tesseract than base64)
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
       const { data } = await Tesseract.recognize(
-        canvas.toDataURL('image/png'),
+        imageData,
         'eng+spa', // English and Spanish support
         { logger: m => console.log(m) }
       );

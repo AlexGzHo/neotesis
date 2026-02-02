@@ -185,7 +185,9 @@ function checkRateLimit(ip) {
 // ============================================================================
 
 // NEW V2 Auth Routes (Simplified)
+// NEW V2 Auth Routes (Simplified)
 app.use('/api/v2/auth', require('./routes/auth_v2'));
+app.use('/api/ocr', require('./routes/ocr'));
 
 // Chat API route con validación, rate limiting estricto Y autenticación OPCIONAL
 app.post('/api/chat',

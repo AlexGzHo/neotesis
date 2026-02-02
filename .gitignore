@@ -7,7 +7,8 @@
 
 # Dependencias
 node_modules/
-package-lock.json
+# package-lock.json should be committed for consistent builds
+# package-lock.json
 yarn.lock
 
 # Netlify
@@ -15,6 +16,7 @@ yarn.lock
 .netlify.toml.backup
 
 # Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -45,3 +47,5 @@ out/
 # External/Temp folders
 react-pdf-main/
 coverage/
+uploads/
+ocr-alta-precision/
