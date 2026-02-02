@@ -13,46 +13,7 @@ export const PDFPage = ({ index, containerWidth, scale, onRestoreSelection, ocrD
     // Factor de escala visual: (Escala deseada) / (Escala de renderizado)
     const visualScale = scale / RENDER_SCALE;
 
-    // Render OCR Text Layer
-    const renderOCRLayer = () => {
-        if (!ocrData || !Array.isArray(ocrData) || ocrData.length === 0 || !pageDims) return null;
-
-        return (
-            <div className="ocr-layer" style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                zIndex: 51, // Above standard text layer
-                pointerEvents: 'none' // Let clicks pass initially, but spans have auto
-            }}>
-                {ocrData.map((word, i) => {
-                    const { bbox, text } = word;
-                    if (!bbox) return null;
-
-                    return (
-                        <span key={i} style={{
-                            position: 'absolute',
-                            left: `${bbox.x0}px`,
-                            top: `${bbox.y0}px`,
-                            width: `${bbox.x1 - bbox.x0}px`,
-                            height: `${bbox.y1 - bbox.y0}px`,
-                            color: 'transparent',
-                            cursor: 'text',
-                            pointerEvents: 'auto',
-                            userSelect: 'text',
-                            fontSize: `${bbox.y1 - bbox.y0}px`, // Approx font size
-                            lineHeight: 1,
-                            whiteSpace: 'nowrap'
-                        }}>
-                            {text}
-                        </span>
-                    );
-                })}
-            </div>
-        );
-    };
+    // Manual OCR Layer removed - using native PDF text layer from backend optimization
 
     return (
         <div
@@ -87,8 +48,7 @@ export const PDFPage = ({ index, containerWidth, scale, onRestoreSelection, ocrD
                     }
                 />
 
-                {/* OCR Layer Overlay */}
-                {renderOCRLayer()}
+
             </div>
         </div>
     );

@@ -33,7 +33,7 @@ async function requireAuth(req, res, next) {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         error: 'No autorizado',
@@ -85,7 +85,7 @@ async function requireAuth(req, res, next) {
 async function optionalAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const decoded = verifyToken(token);
@@ -127,8 +127,11 @@ const authMiddleware = (req, res, next) => {
     // Normalize legacy payloads.
     // generateToken() signs { userId, email }, but routes often check req.user.id.
     // Make both available so protected chat routes work reliably.
-    if (decoded && !decoded.id && decoded.userId) decoded.id = decoded.userId;
-    if (decoded && !decoded.userId && decoded.id) decoded.userId = decoded.id;
+    // Normalize legacy payloads to ensure req.user.id is available
+    if (decoded) {
+      if (!decoded.id && decoded.userId) decoded.id = decoded.userId;
+      if (!decoded.userId && decoded.id) decoded.userId = decoded.id;
+    }
 
     // Optional diagnostic logging (never log token)
     if (process.env.DEBUG_AUTH === 'true') {

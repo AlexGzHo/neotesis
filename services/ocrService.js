@@ -14,6 +14,21 @@ class OCRService {
      * @returns {Promise<string>} - Path to processed PDF
      */
     async processPDF(inputPath, outputPath, options = {}) {
+        // 0. CHECK IF OCRMYPDF IS AVAILABLE
+        const isOCRInstalled = await new Promise((resolve) => {
+            const command = process.platform === 'win32' ? 'where ocrmypdf' : 'which ocrmypdf';
+            require('child_process').exec(command, (err) => resolve(!err));
+        });
+
+        if (!isOCRInstalled) {
+            console.warn('[OCRService] ocrmypdf binary not found. Returning original file.');
+            fs.copyFileSync(inputPath, outputPath);
+            return {
+                pdfPath: outputPath,
+                textPath: null,
+                logs: 'Warning: OCR skipped because ocrmypdf is not installed on this system.'
+            };
+        }
         const {
             language = 'spa+eng',
             sidecar = false, // Return text file
@@ -27,7 +42,8 @@ class OCRService {
         const args = [
             '--verbose', '1',
             '--output-type', 'pdf',
-            '--pdf-renderer', 'hocr', // 'hocr' or 'sandwich'
+            '--pdf-renderer', 'sandwich', // Better invisible text layer (robust for PPTs)
+            '--tesseract-timeout', '300', // 5 mins per page max
             '--invalidate-digital-signatures'
         ];
 

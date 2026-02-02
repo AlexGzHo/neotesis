@@ -8,14 +8,36 @@ const { exec } = require('child_process');
 const ocrService = require('../services/ocrService');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 
-// Helper to check text using pdftotext
-const checkTextWithPoppler = (filePath) => {
-    return new Promise((resolve) => {
-        exec(`pdftotext -f 1 -l 3 "${filePath}" -`, (error, stdout, stderr) => {
-            if (error) { resolve(null); return; }
-            resolve(stdout || '');
-        });
-    });
+
+// Helper to check text using pdfjs-dist
+const checkTextWithPdfJs = async (filePath) => {
+    try {
+        // Dynamic import for ESM module in CommonJS environment
+        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+        const data = new Uint8Array(fs.readFileSync(filePath));
+        // Use default export if necessary, or just the module
+        const docFunction = pdfjsLib.getDocument || pdfjsLib.default.getDocument;
+        const loadingTask = docFunction(data);
+
+        const pdf = await loadingTask.promise;
+        let fullText = '';
+
+        // Check first 3 pages only (optimization)
+        const pagesToCheck = Math.min(pdf.numPages, 3);
+
+        for (let i = 1; i <= pagesToCheck; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + ' ';
+        }
+
+        return fullText;
+    } catch (error) {
+        console.error('Error reading PDF with pdfjs:', error);
+        return null;
+    }
 };
 
 // Configure Multer for temp uploads
@@ -66,7 +88,7 @@ router.post('/', upload.single('pdf'), async (req, res) => {
 
         if (options.ocrType === 'skip-text') {
             try {
-                const textContent = await checkTextWithPoppler(inputPath);
+                const textContent = await checkTextWithPdfJs(inputPath);
                 const cleanText = textContent ? textContent.replace(/\s/g, '') : '';
 
                 if (cleanText.length > 50) {

@@ -9,7 +9,8 @@
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
 
-// Almacenamiento en memoria para rate limiting (en producción usar Redis)
+// TODO: Replace Map with Redis client for distributed deployments
+// const redisClient = require('redis').createClient();
 const rateLimitStore = new Map();
 const blacklistedIPs = new Set();
 const suspiciousActivity = new Map();
@@ -173,10 +174,10 @@ const speedLimiter = slowDown({
  */
 function getClientIP(req) {
   return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-         req.headers['x-real-ip'] ||
-         req.headers['client-ip'] ||
-         req.ip ||
-         'unknown';
+    req.headers['x-real-ip'] ||
+    req.headers['client-ip'] ||
+    req.ip ||
+    'unknown';
 }
 
 /**
