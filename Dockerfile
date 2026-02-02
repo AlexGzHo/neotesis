@@ -1,42 +1,14 @@
 # ==========================================
 # Stage 1: Build Frontend (React + Vite)
 # ==========================================
-FROM node:18-alpine AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Install dependencies for build
-# libc6-compat needed for some native modules on Alpine
-# Install dependencies for build
-# libc6-compat needed for some native modules on Alpine
-# Install system tools required by ocrmypdf and Tesseract
-RUN apk add --no-cache \
-    libc6-compat \
-    python3 \
-    py3-pip \
-    tesseract-ocr \
-    tesseract-ocr-data-eng \
-    tesseract-ocr-data-spa \
-    ghostscript \
-    unpaper \
-    pngquant \
-    poppler-utils \
-    build-base \
-    python3-dev \
-    libffi-dev \
-    gcc \
-    musl-dev \
-    linux-headers
-
-# Install ocrmypdf via pip in a virtual environment to avoid conflicts
-RUN python3 -m venv /opt/venv && \
-    . /opt/venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir ocrmypdf
-
-# Add venv to PATH so ocrmypdf is globally available
-ENV PATH="/opt/venv/bin:$PATH"
+# Copy dependency files
 COPY package*.json ./
+
+# Install all dependencies (frontend needs devDeps for build)
 RUN npm ci
 
 # Copy source code
@@ -47,44 +19,35 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # ==========================================
-# Stage 2: Production Runtime (Node.js)
+# Stage 2: Production Runtime (OCR + Node)
 # ==========================================
-FROM node:18-alpine
+# Use official OCRmyPDF image as base (Ubuntu-based)
+FROM jbarlow83/ocrmypdf
 
+# Set user root for installation
+USER root
+
+# Install Node.js 22 LTS and system utilities
+RUN apt-get update && apt-get install -y \
+    curl \
+    tesseract-ocr-spa \
+    poppler-utils \
+    ghostscript \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
 
-# Install ONLY production dependencies
+# Set node env
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Copy package files and install production dependencies
 COPY package*.json ./
 RUN npm ci --only=production
-
-# Install runtime system dependencies for OCR
-# libc6-compat, python3, ocrmypdf, tesseract, ghostscript, poppler-utils
-RUN apk add --no-cache \
-    libc6-compat \
-    python3 \
-    py3-pip \
-    tesseract-ocr \
-    tesseract-ocr-data-eng \
-    tesseract-ocr-data-spa \
-    ghostscript \
-    unpaper \
-    pngquant \
-    poppler-utils \
-    build-base \
-    python3-dev \
-    libffi-dev \
-    gcc \
-    musl-dev \
-    linux-headers
-
-# Install ocrmypdf via pip in a virtual environment (Runtime)
-RUN python3 -m venv /opt/venv && \
-    . /opt/venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir ocrmypdf
-
-# Add venv to PATH
-ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy backend source code
 COPY server.js ./
@@ -99,15 +62,15 @@ COPY migrations ./migrations
 # Copy built frontend from Stage 1
 COPY --from=builder /app/dist ./dist
 
-# Create logs directory
-RUN mkdir -p logs
-
-# Environment setup
-ENV NODE_ENV=production
-ENV PORT=8080
+# Create necessary directories with correct permissions
+RUN mkdir -p logs uploads/temp && \
+    chmod -R 777 logs uploads
 
 # Expose port
 EXPOSE 8080
+
+# Override entrypoint (ocrmypdf image has a default one)
+ENTRYPOINT ["/usr/bin/env"]
 
 # Start server
 CMD ["node", "server.js"]

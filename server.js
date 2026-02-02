@@ -308,8 +308,10 @@ const server = app.listen(PORT, async () => {
   console.log(`🌐 CORS permitido: ${SECURITY_CONFIG.ALLOWED_ORIGIN}`);
 });
 
-// Increase timeout to 10 minutes for long OCR jobs
+// Aumentar timeout del servidor a 10 minutos para soportar OCR de documentos grandes
 server.setTimeout(600000);
+
+
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

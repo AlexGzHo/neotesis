@@ -118,8 +118,8 @@ const SECURITY_CONFIG = {
 
   // Configuración de payloads
   PAYLOAD: {
-    // Límite de tamaño de payload (10MB)
-    MAX_SIZE: '10mb',
+    // Límite de tamaño de payload (50MB)
+    MAX_SIZE: '50mb',
 
     // Timeout de requests
     REQUEST_TIMEOUT_MS: 10000,

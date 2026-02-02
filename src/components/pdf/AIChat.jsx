@@ -65,8 +65,12 @@ export const AIChat = () => {
             formData.append('pdf', file);
 
             // Smart OCR Request
-            const response = await fetch('http://localhost:8081/api/ocr', {
+            const token = localStorage.getItem('token');
+            const response = await fetch('http://localhost:8081/api/ocr/process', {
                 method: 'POST',
+                headers: {
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
                 body: formData
             });
 

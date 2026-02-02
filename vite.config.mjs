@@ -30,6 +30,7 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
+        target: 'esnext', // Required for pdfjs-dist top-level await
         rollupOptions: {
             output: {
                 manualChunks: {
@@ -37,6 +38,11 @@ export default defineConfig({
                     vendor: ['react', 'react-dom'],
                 },
             },
+        },
+    },
+    esbuild: {
+        supported: {
+            'top-level-await': true
         },
     },
     optimizeDeps: {
