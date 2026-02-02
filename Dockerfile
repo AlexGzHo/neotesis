@@ -57,6 +57,35 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
+# Install runtime system dependencies for OCR
+# libc6-compat, python3, ocrmypdf, tesseract, ghostscript, poppler-utils
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    py3-pip \
+    tesseract-ocr \
+    tesseract-ocr-data-eng \
+    tesseract-ocr-data-spa \
+    ghostscript \
+    unpaper \
+    pngquant \
+    poppler-utils \
+    build-base \
+    python3-dev \
+    libffi-dev \
+    gcc \
+    musl-dev \
+    linux-headers
+
+# Install ocrmypdf via pip in a virtual environment (Runtime)
+RUN python3 -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install --no-cache-dir ocrmypdf
+
+# Add venv to PATH
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy backend source code
 COPY server.js ./
 COPY config ./config

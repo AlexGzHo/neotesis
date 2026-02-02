@@ -10,7 +10,7 @@ import ErrorBoundary from '../common/ErrorBoundary';
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 import { PDFPage } from './PDFPage';
 
-export const PDFViewer = ({ pdfData, onTextExtracted, onUpload }) => {
+export const PDFViewer = ({ pdfData, onTextExtracted, onUpload, isLoadingExternal }) => {
     const {
         pdfDocument,
         totalPages,
@@ -120,8 +120,23 @@ export const PDFViewer = ({ pdfData, onTextExtracted, onUpload }) => {
                     </div>
                 )}
 
-                {/* Error/Loading from hook */}
-                {isLoading && (
+                {/* External Loading State (OCR Processing) */}
+                {isLoadingExternal && (
+                    <div className="absolute inset-0 z-50 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
+                        <div className="relative w-20 h-20 mb-6">
+                            <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                            <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            <i className="fas fa-magic absolute inset-0 flex items-center justify-center text-primary text-xl animate-pulse"></i>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-2">Optimizando Documento</h3>
+                        <p className="text-slate-500 max-w-xs text-center">
+                            Aplicando OCR inteligente y detectando texto para la IA...
+                        </p>
+                    </div>
+                )}
+
+                {/* Internal Loading from hook */}
+                {(isLoading && !isLoadingExternal) && (
                     <div className="flex items-center justify-center p-10">
                         <i className="fas fa-spinner fa-spin text-3xl text-accent"></i>
                     </div>

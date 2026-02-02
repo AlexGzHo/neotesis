@@ -4,8 +4,19 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { promisify } = require('util');
+const { exec } = require('child_process');
 const ocrService = require('../services/ocrService');
-const { requireAuth, optionalAuth } = require('../middleware/auth'); // Check middleware availability
+const { requireAuth, optionalAuth } = require('../middleware/auth');
+
+// Helper to check text using pdftotext
+const checkTextWithPoppler = (filePath) => {
+    return new Promise((resolve) => {
+        exec(`pdftotext -f 1 -l 3 "${filePath}" -`, (error, stdout, stderr) => {
+            if (error) { resolve(null); return; }
+            resolve(stdout || '');
+        });
+    });
+};
 
 // Configure Multer for temp uploads
 const upload = multer({
@@ -25,7 +36,7 @@ const upload = multer({
 const unlinkAsync = promisify(fs.unlink);
 
 // POST /api/ocr
-router.post('/', optionalAuth, upload.single('pdf'), async (req, res) => {
+router.post('/', upload.single('pdf'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No se subió ningún archivo PDF' });
     }
@@ -33,43 +44,71 @@ router.post('/', optionalAuth, upload.single('pdf'), async (req, res) => {
     const inputPath = req.file.path;
     const outputPath = path.join(req.file.destination, `processed_${req.file.filename}.pdf`);
 
-    // Default options from query or body
+    // Default options
     const options = {
         language: req.body.language || 'spa+eng',
-        deskew: req.body.deskew === 'true',
-        clean: req.body.clean === 'true',
-        ocrType: req.body.force === 'true' ? 'force-ocr' : 'skip-text',
+        deskew: true,
+        clean: true,
+        ocrType: 'skip-text', // Default to skip-text for smart check
         jobs: 1
     };
 
-    try {
-        console.log(`[OCR API] Processing ${req.file.originalname} with options:`, options);
+    // Override if forced
+    if (req.body.force === 'true') {
+        options.ocrType = 'force-ocr';
+    }
 
+    try {
+        console.log(`[OCR API] Received ${req.file.originalname}`);
+
+        // 1. SMART CHECK
+        let needsOCR = true;
+
+        if (options.ocrType === 'skip-text') {
+            try {
+                const textContent = await checkTextWithPoppler(inputPath);
+                const cleanText = textContent ? textContent.replace(/\s/g, '') : '';
+
+                if (cleanText.length > 50) {
+                    console.log(`[OCR API] Smart Check: Text found (${cleanText.length} chars). Skipping OCR.`);
+                    needsOCR = false;
+                } else {
+                    console.log(`[OCR API] Smart Check: Insufficient text. Starting OCR.`);
+                }
+            } catch (err) {
+                console.warn('[OCR API] Smart Check failed:', err.message);
+            }
+        }
+
+        if (!needsOCR) {
+            // Return original file
+            return res.download(inputPath, `Doc_${req.file.originalname}`, async (err) => {
+                try {
+                    if (fs.existsSync(inputPath)) await unlinkAsync(inputPath);
+                } catch (e) { }
+            });
+        }
+
+        // 2. RUN OCR
+        console.log(`[OCR API] Running OCR with options:`, options);
         const result = await ocrService.processPDF(inputPath, outputPath, options);
 
-        // Send file back
+        // 3. SEND RESULT
         res.download(outputPath, `OCR_${req.file.originalname}`, async (err) => {
-            // Cleanup temp files after sending
             try {
                 if (fs.existsSync(inputPath)) await unlinkAsync(inputPath);
                 if (fs.existsSync(outputPath)) await unlinkAsync(outputPath);
                 if (result.textPath && fs.existsSync(result.textPath)) await unlinkAsync(result.textPath);
             } catch (cleanupErr) {
-                console.error('Error cleaning up OCR temp files:', cleanupErr);
+                console.error('Error cleaning up:', cleanupErr);
             }
-
-            if (err) {
-                console.error('Error sending file:', err);
-                if (!res.headersSent) {
-                    res.status(500).send('Error al descargar el archivo procesado');
-                }
+            if (err && !res.headersSent) {
+                res.status(500).send('Error downloading processed file');
             }
         });
 
     } catch (error) {
         console.error('[OCR API] Error:', error);
-
-        // Attempt cleanup on error
         try {
             if (fs.existsSync(inputPath)) await unlinkAsync(inputPath);
             if (fs.existsSync(outputPath)) await unlinkAsync(outputPath);

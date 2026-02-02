@@ -48,11 +48,39 @@ export const AIChat = () => {
         };
     }, [pdfData]);
 
-    const handleFileUpload = (e) => {
+    const [isDataLoading, setIsDataLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // ... memory leak cleanup ...
+
+    const handleFileUpload = async (e) => {
         const file = e.target.files[0];
-        if (file && file.type === 'application/pdf') {
-            const fileUrl = URL.createObjectURL(file);
+        if (!file || file.type !== 'application/pdf') return;
+
+        try {
+            setIsDataLoading(true);
+            setPdfData(null); // Reset viewer
+
+            const formData = new FormData();
+            formData.append('pdf', file);
+
+            // Smart OCR Request
+            const response = await fetch('http://localhost:8081/api/ocr', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('Error en el procesamiento OCR');
+
+            const blob = await response.blob();
+            const fileUrl = URL.createObjectURL(blob);
             setPdfData(fileUrl);
+
+        } catch (err) {
+            console.error(err);
+            alert('Error al procesar el documento. Intenta de nuevo.');
+        } finally {
+            setIsDataLoading(false);
         }
     };
 
@@ -97,6 +125,7 @@ export const AIChat = () => {
                         pdfData={pdfData}
                         onTextExtracted={setPdfText}
                         onUpload={handleFileUpload}
+                        isLoadingExternal={isDataLoading}
                     />
                 </div>
 

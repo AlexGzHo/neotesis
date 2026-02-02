@@ -4,7 +4,11 @@ require('dotenv').config();
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Configuration for DB connection
-const sequelize = new Sequelize(process.env.DATABASE_URL || 'postgres://neotesis:local_password@localhost:5432/neotesis_db', {
+// Construct URL dynamically if not provided
+const dbUrl = process.env.DATABASE_URL ||
+    `postgres://${process.env.DB_USER || 'neotesis'}:${process.env.DB_PASSWORD || 'local_password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'neotesis_db'}`;
+
+const sequelize = new Sequelize(dbUrl, {
     dialect: 'postgres',
     logging: false, // Set to console.log to see SQL queries
     dialectOptions: isProduction ? {
