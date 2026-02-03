@@ -1,42 +1,27 @@
 # ==========================================
 # Stage 1: Build Frontend (React + Vite)
 # ==========================================
-FROM node:22-slim AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
 # Copy dependency files
 COPY package*.json ./
 
-# Install all dependencies (frontend needs devDeps for build)
+# Install all dependencies
 RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build frontend (generates /app/dist)
+# Build frontend
 ENV NODE_ENV=production
 RUN npm run build
 
 # ==========================================
-# Stage 2: Production Runtime (OCR + Node)
+# Stage 2: Production Runtime
 # ==========================================
-# Use official OCRmyPDF image as base (Ubuntu-based)
-FROM jbarlow83/ocrmypdf
-
-# Set user root for installation
-USER root
-
-# Install Node.js 22 LTS and system utilities
-RUN apt-get update && apt-get install -y \
-    curl \
-    tesseract-ocr-spa \
-    poppler-utils \
-    ghostscript \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:22-bookworm-slim
 
 # Set working directory
 WORKDIR /app
@@ -62,15 +47,12 @@ COPY migrations ./migrations
 # Copy built frontend from Stage 1
 COPY --from=builder /app/dist ./dist
 
-# Create necessary directories with correct permissions
+# Create necessary directories
 RUN mkdir -p logs uploads/temp && \
     chmod -R 777 logs uploads
 
 # Expose port
 EXPOSE 8080
-
-# Override entrypoint (ocrmypdf image has a default one)
-ENTRYPOINT ["/usr/bin/env"]
 
 # Start server
 CMD ["node", "server.js"]

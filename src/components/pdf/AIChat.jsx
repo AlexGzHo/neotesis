@@ -64,20 +64,8 @@ export const AIChat = () => {
             const formData = new FormData();
             formData.append('pdf', file);
 
-            // Smart OCR Request
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:8081/api/ocr/process', {
-                method: 'POST',
-                headers: {
-                    'Authorization': token ? `Bearer ${token}` : ''
-                },
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('Error en el procesamiento OCR');
-
-            const blob = await response.blob();
-            const fileUrl = URL.createObjectURL(blob);
+            // Direct client-side loading (Restoring stable react-pdf-main version)
+            const fileUrl = URL.createObjectURL(file);
             setPdfData(fileUrl);
 
         } catch (err) {
