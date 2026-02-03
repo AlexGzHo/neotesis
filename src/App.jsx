@@ -1,11 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
-import { LandingPage } from './components/landing/LandingPage';
-import { CitationTools } from './components/citation/CitationTools';
-import { SampleCalculator } from './components/calculator/SampleCalculator';
-import { AIChat } from './components/pdf/AIChat';
-import { AuthProvider } from './context/AuthContext';
+import { LandingPage } from './features/landing';
+import { AIChat } from './features/pdf-viewer';
+import { AuthProvider } from './features/auth';
 
 function App() {
     return (
@@ -14,8 +12,6 @@ function App() {
                 <MainLayout>
                     <Routes>
                         <Route path="/" element={<LandingPage />} />
-                        <Route path="/citation-tools" element={<CitationTools />} />
-                        <Route path="/sample-calculator" element={<SampleCalculator />} />
                         <Route path="/ai-chat" element={<AIChat />} />
                     </Routes>
                 </MainLayout>

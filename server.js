@@ -86,8 +86,9 @@ app.use('/api/v2/auth', require('./routes/auth_v2'));
 app.use('/api/auth', authRoutes);
 
 // Feature Routes
-app.use('/api/ocr', require('./routes/ocr'));
-app.use('/api', chatRoutes); // Mounts /chat, /chats, etc.
+// Featur Routes (Disabled for Core Restoration)
+// app.use('/api/ocr', require('./routes/ocr'));
+// app.use('/api', chatRoutes); // Mounts /chat, /chats, etc.
 
 // Configuración para proxy (usando configuración centralizada)
 const REQUEST_TIMEOUT = SECURITY_CONFIG.PAYLOAD.REQUEST_TIMEOUT_MS;

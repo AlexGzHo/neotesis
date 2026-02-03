@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { useAuth } from '../../context/AuthContext';
-import { Button } from '../common/Button';
-import { Input } from '../common/Input';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../../../components/common/Button';
+import { Input } from '../../../components/common/Input';
 
 export const AuthModal = ({ isOpen, onClose }) => {
     const [isLogin, setIsLogin] = useState(true);

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../common/Button';
-import { AuthModal } from '../auth/AuthModal';
-import { useAuth } from '../../context/AuthContext';
+import { AuthModal, useAuth } from '../../features/auth';
 
 export const Header = () => {
     const [isMobileOpen, setIsMobileOpen] = useState(false);

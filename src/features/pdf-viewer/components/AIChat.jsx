@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PDFViewer } from './PDFViewer';
 import { ChatPanel } from './ChatPanel';
-import { useQuota } from '../../hooks/useQuota';
+import { useQuota } from '../../../hooks/useQuota';
 
 export const AIChat = () => {
     const [pdfData, setPdfData] = useState(null);
@@ -64,9 +64,8 @@ export const AIChat = () => {
             const formData = new FormData();
             formData.append('pdf', file);
 
-            // Direct client-side loading (Restoring stable react-pdf-main version)
-            const fileUrl = URL.createObjectURL(file);
-            setPdfData(fileUrl);
+            // Pass File object directly to avoid XHR/Blob URL issues in Worker
+            setPdfData(file);
 
         } catch (err) {
             console.error(err);

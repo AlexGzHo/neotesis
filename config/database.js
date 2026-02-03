@@ -8,10 +8,13 @@ const isProduction = process.env.NODE_ENV === 'production';
 const dbUrl = process.env.DATABASE_URL ||
     `postgres://${process.env.DB_USER || 'neotesis'}:${process.env.DB_PASSWORD || 'local_password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'neotesis_db'}`;
 
+
+const useSSL = process.env.DB_SSL === 'true' || (isProduction && process.env.DB_SSL !== 'false');
+
 const sequelize = new Sequelize(dbUrl, {
     dialect: 'postgres',
     logging: false, // Set to console.log to see SQL queries
-    dialectOptions: isProduction ? {
+    dialectOptions: useSSL ? {
         ssl: {
             require: true,
             rejectUnauthorized: false

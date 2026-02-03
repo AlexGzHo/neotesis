@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { pdfjs } from 'react-pdf';
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Baseline worker setup using versioned CDN (Consistent with stable patterns)
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Set worker using Vite's asset URL mechanism
+// This ensures the worker is bundled correctly and served from the local origin
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
 export const usePDFViewer = () => {
   const [numPages, setNumPages] = useState(0);
@@ -11,14 +13,15 @@ export const usePDFViewer = () => {
   const [error, setError] = useState(null);
 
   const onDocumentLoadSuccess = ({ numPages: nextNumPages }) => {
+    console.log("PDF Loaded Successfully. Pages:", nextNumPages);
     setNumPages(nextNumPages);
     setIsLoading(false);
     setError(null);
   };
 
   const onDocumentLoadError = (err) => {
-    console.error("Error loading PDF:", err);
-    setError("Error al cargar el archivo PDF.");
+    console.error("Critical PDF Load Error:", err);
+    setError(`Error: ${err.message || 'Unknown error'} (${err.name})`);
     setIsLoading(false);
   };
 

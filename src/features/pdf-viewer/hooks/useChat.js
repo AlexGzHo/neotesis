@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useSecureFetch } from './useSecureFetch';
-import { api } from '../services/api';
-import { sanitizeInput } from '../utils/sanitization';
+import { useSecureFetch } from '../../../hooks/useSecureFetch';
+import { api } from '../../../services/api';
+import { sanitizeInput } from '../../../utils/sanitization';
 
 export const useChat = (quota) => {
   const [messages, setMessages] = useState([]);
@@ -15,16 +15,16 @@ export const useChat = (quota) => {
 
   const sendMessage = useCallback(async (content, pdfContext = []) => {
     if (!content.trim()) return;
-    
+
     // Check quota
     if (quota && !quota.isAvailable) {
-        setError("Límite de cuota excedido. Intenta más tarde.");
-        return;
+      setError("Límite de cuota excedido. Intenta más tarde.");
+      return;
     }
 
     setLoading(true);
     setError(null);
-    
+
     // Optimistic UI update
     const sanitizedContent = sanitizeInput(content);
     addMessage('user', sanitizedContent);
@@ -51,9 +51,9 @@ export const useChat = (quota) => {
       });
 
       if (response && response.reply) {
-          addMessage('ai', response.reply);
+        addMessage('ai', response.reply);
       } else {
-          throw new Error("Respuesta inválida del servidor");
+        throw new Error("Respuesta inválida del servidor");
       }
 
     } catch (err) {
@@ -66,8 +66,8 @@ export const useChat = (quota) => {
   }, [messages, quota, secureFetch]);
 
   const clearChat = () => {
-      setMessages([]);
-      setError(null);
+    setMessages([]);
+    setError(null);
   };
 
   return {

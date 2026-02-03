@@ -6,7 +6,7 @@ Plataforma académica integral con generador de citas APA, chat PDF con IA y cal
 
 ## 🌟 Características Principales
 
-### 📚 Generación de Citas
+### 📚 Generación de Citas (En Mantenimiento)
 - **Generador APA 7ma Edición**: Crea referencias bibliográficas precisas para libros, artículos y páginas web
 - **Auto-Cita Inteligente**: Genera citas automáticamente desde URLs o DOIs
   - Soporte para repositorios peruanos (UCV, UPAO, UNMSM, etc.)
@@ -32,7 +32,7 @@ Plataforma académica integral con generador de citas APA, chat PDF con IA y cal
 - **Responsive Design**: Optimizado para móvil y desktop
 - **Menú de Opciones**: Gestiona tus chats con un menú intuitivo
 
-### 📊 Herramientas Estadísticas
+### 📊 Herramientas Estadísticas (En Mantenimiento)
 - **Calculadora de Muestra**: Determina el tamaño de muestra para investigaciones cuantitativas
 
 ## 🏗️ Arquitectura Moderna (React + Vite + Docker)

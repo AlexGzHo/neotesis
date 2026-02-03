@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useSecureFetch } from '../hooks/useSecureFetch';
-import { API_ENDPOINTS } from '../services/api';
+import { useSecureFetch } from '../../../hooks/useSecureFetch';
+import { API_ENDPOINTS } from '../../../services/api';
 
 const AuthContext = createContext();
 

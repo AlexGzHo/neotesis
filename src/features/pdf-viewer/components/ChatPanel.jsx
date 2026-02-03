@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useChat } from '../../hooks/useChat';
+import { useChat } from '../hooks/useChat';
 
 export const ChatPanel = ({ pdfContext, quota }) => {
     const { messages, loading, sendMessage, error } = useChat(quota);

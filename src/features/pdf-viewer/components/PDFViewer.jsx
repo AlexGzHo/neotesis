@@ -2,17 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Document, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
-import { usePDFViewer } from '../../hooks/usePDFViewer';
+import { usePDFViewer } from '../hooks/usePDFViewer';
 import { PDFPage } from './PDFPage';
 
-// Standard options from react-pdf-main (Versioned for stability)
+// Standard options
 const options = {
     cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
     standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+    disableRange: true,
+    disableStream: true,
 };
-
-// Set worker globally in component context as well
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export const PDFViewer = ({ pdfData, onUpload, isLoadingExternal }) => {
     const {
@@ -106,10 +105,17 @@ export const PDFViewer = ({ pdfData, onUpload, isLoadingExternal }) => {
                     </div>
                 )}
 
+                {/* Enhanced Error Display */}
                 {error && (
-                    <div className="text-red-500 p-10 flex flex-col items-center">
+                    <div className="text-red-500 p-10 flex flex-col items-center bg-red-50 rounded-xl border border-red-100 m-4">
                         <span className="material-icons-round text-4xl mb-2">error_outline</span>
-                        <p>{error}</p>
+                        <p className="font-bold">Error de Carga</p>
+                        <code className="text-xs bg-black/10 p-2 rounded mt-2 max-w-full overflow-auto text-left">
+                            {error}
+                        </code>
+                        <p className="text-xs text-slate-500 mt-2">
+                            Intenta recargar la página o verificar tu conexión.
+                        </p>
                     </div>
                 )}
 

@@ -29,6 +29,7 @@ services:
       # Pass secrets from .env file
       - GROQ_API_KEY=${GROQ_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
+      - DB_SSL=false
     depends_on:
       - db
     restart: always

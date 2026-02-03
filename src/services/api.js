@@ -1,5 +1,5 @@
-// Trace: Bypass Proxy for debugging
-const BASE_URL = 'http://127.0.0.1:8080';
+// Trace: Relative path for unified build (Docker) and Vite Proxy (Dev)
+const BASE_URL = '';
 
 export const API_ENDPOINTS = {
     CHAT: {
